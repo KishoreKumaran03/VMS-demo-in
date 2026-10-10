@@ -1,0 +1,6 @@
+{
+  "name": "Enterprise VMS - Visitor Management System",
+  "description": "Multi-role enterprise visitor management system with automated pass generation, clearance workflows, and fast-track kiosk check-in.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
