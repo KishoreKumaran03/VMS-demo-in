@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { PASSES, type FailReason, type Host, type Pass, type VisitStatus } from "./data";
+import { type FailReason, type Host, type Pass, type VisitStatus } from "./data";
 
 export type Screen =
   | "home"
@@ -22,7 +22,6 @@ export type Screen =
   | "print-fail"
   | "success"
   | "wi-details"
-  | "wi-otp"
   | "otp-cooldown"
   | "wi-purpose"
   | "wi-host"
@@ -59,7 +58,6 @@ export const SCREEN_NAMES: Record<Screen, string> = {
   "print-fail": "Printer problem",
   success: "Signed in",
   "wi-details": "Walk-in · Details",
-  "wi-otp": "Walk-in · Verify phone",
   "otp-cooldown": "Code cooldown",
   "wi-purpose": "Walk-in · Purpose",
   "wi-host": "Walk-in · Host",
@@ -104,6 +102,9 @@ export type Session = {
   durationText?: string;
   returnTo?: Screen;
   code?: string;
+  visitRequestId?: string;
+  consentAccepted?: boolean;
+  ndaAccepted?: boolean;
 };
 
 const emptySession = (): Session => ({ name: "", phone: "", company: "" });
@@ -135,17 +136,10 @@ type Ctx = {
 
 const KioskCtx = createContext<Ctx | null>(null);
 
-function initialVisits(): Record<string, Visit> {
-  const v: Record<string, Visit> = {};
-  PASSES.forEach((p) => (v[p.id] = { status: "invited" }));
-  v["VIS-8008"] = { status: "in", checkInAt: Date.now() - 72 * 60 * 1000 };
-  return v;
-}
-
 export function KioskProvider({ children }: { children: ReactNode }) {
   const [screen, setScreen] = useState<Screen>("home");
   const [session, setSession] = useState<Session>(emptySession);
-  const [visits, setVisits] = useState<Record<string, Visit>>(initialVisits);
+  const [visits, setVisits] = useState<Record<string, Visit>>({});
   const [helpRequests, setHelp] = useState<HelpRequest[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);

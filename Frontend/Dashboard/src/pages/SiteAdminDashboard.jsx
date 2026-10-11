@@ -27,14 +27,15 @@ export const SiteAdminDashboard = () => {
     }, 600);
   };
 
-  const handleCreatePass = (e) => {
+  const handleCreatePass = async (e) => {
     e.preventDefault();
     if (!newVisitorName.trim() || !newVisitorEmail.trim()) {
       showToast('Please enter visitor name and email');
       return;
     }
 
-    addPassRequest({
+    try {
+      await addPassRequest({
       visitorName: newVisitorName.trim(),
       email: newVisitorEmail.trim(),
       company: newVisitorCompany.trim() || 'Enterprise Guest',
@@ -46,7 +47,11 @@ export const SiteAdminDashboard = () => {
       slotDescription: 'Today, 2:30 PM - 5:00 PM',
       zoneClearance: newVisitorZone,
       purpose: 'Fast-Track Pass Created by Site Admin',
-    });
+      });
+    } catch (error) {
+      showToast(error.message || 'The visit could not be created.');
+      return;
+    }
 
     setNewVisitorName('');
     setNewVisitorEmail('');

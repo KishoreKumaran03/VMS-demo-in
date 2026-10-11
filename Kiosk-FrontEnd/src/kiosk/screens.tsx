@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -31,8 +31,6 @@ import {
   CORRECT_OTP,
   DEMO_SCANS,
   DEPARTMENTS,
-  EMPLOYEES,
-  HOSTS,
   NO_RESPONSE_CODE,
   PASSES,
   PRINT_FAIL_CODE,
@@ -43,6 +41,7 @@ import {
   type Pass,
   type VisitorType,
 } from "./data";
+import { checkInPass, checkOutPass, getKioskRequest, KIOSK_SITE_ID, searchKioskHosts, submitWalkIn, verifyPass, type ApiVisit } from "./api";
 import { FAQS, FAQ_CATEGORIES, type FaqCategory } from "./faq-data";
 import { useCardSpotlightTilt } from "./pointer";
 import {
@@ -60,7 +59,7 @@ import {
 import { useCountdown, useKiosk, type Screen } from "./store";
 
 const SI_STEPS = ["Your pass", "Welcome", "Badge"];
-const WI_STEPS = ["Details", "Verify", "Purpose", "Host", "Consent"];
+const WI_STEPS = ["Details", "Purpose", "Host", "Consent"];
 const SO_STEPS = ["Find visit", "Choose", "Confirm"];
 
 function Page({ children, className }: { children: ReactNode; className?: string }) {
@@ -266,11 +265,44 @@ function Home() {
 function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
   const { go, update } = useKiosk();
   const [demo, setDemo] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const frameRef = useRef<number | null>(null);
   const pick = (code: string) => {
     setDemo(false);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     update({ code });
     go(mode === "signin" ? "si-verifying" : "so-verifying");
   };
+  const startCamera = async () => {
+    setCameraError("");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera access is unavailable in this browser.");
+      const detectorCtor = (window as Window & { BarcodeDetector?: new (options?: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector;
+      if (!detectorCtor) throw new Error("QR scanning is unavailable. Type the pass code instead.");
+      streamRef.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+      if (!videoRef.current) return;
+      videoRef.current.srcObject = streamRef.current;
+      await videoRef.current.play();
+      const detector = new detectorCtor({ formats: ["qr_code"] });
+      const scan = async () => {
+        if (!videoRef.current) return;
+        try {
+          const codes = await detector.detect(videoRef.current);
+          if (codes[0]?.rawValue) return pick(codes[0].rawValue);
+        } catch { /* camera frame is not ready yet */ }
+        frameRef.current = requestAnimationFrame(scan);
+      };
+      frameRef.current = requestAnimationFrame(scan);
+    } catch (error) {
+      setCameraError(error instanceof Error ? error.message : "Camera could not start. Type the pass code instead.");
+    }
+  };
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
   return (
     <Page>
       <FlowHeader
@@ -281,6 +313,7 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
       />
       <div className="grid flex-1 grid-cols-[1fr_380px] items-center gap-14">
         <div className="relative mx-auto aspect-[4/3] h-full max-h-[460px] overflow-hidden rounded-3xl bg-foreground/90 shadow-lift">
+          <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full object-cover" />
           {[
             "left-6 top-6 border-l-4 border-t-4 rounded-tl-2xl",
             "right-6 top-6 border-r-4 border-t-4 rounded-tr-2xl",
@@ -330,16 +363,17 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
             }
           />
           <div className="flex flex-col gap-6">
-            <Btn onClick={() => setDemo(true)}>
-              <QrCode className="h-5 w-5" /> Simulate scan
+            <Btn onClick={startCamera}>
+              <QrCode className="h-5 w-5" /> Start QR scanner
             </Btn>
+            {cameraError && <p role="alert" className="text-[13px] text-destructive">{cameraError}</p>}
             <Btn variant="secondary" onClick={() => go(mode === "signin" ? "si-code" : "so-code")}>
               <KeyIcon className="h-5 w-5" /> Enter pass code instead
             </Btn>
           </div>
         </div>
       </div>
-      {demo && (
+      {demo && import.meta.env.DEV && (
         <Modal onClose={() => setDemo(false)}>
           <h2 className="text-[20px] font-bold">Demo passes</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">Pick a pass to simulate a scan.</p>
@@ -375,10 +409,11 @@ function CodeScreen({ mode }: { mode: "signin" | "signout" }) {
       <div className="grid flex-1 grid-cols-2 items-center gap-16">
         <div>
           <Heading
-            title="Type your pass code"
-            sub="It is the code that starts with VIS, shown under your QR code."
+            title="Enter your pass code"
+            sub="Type the full code shown under the QR code in your invitation."
           />
-          <div className="flex h-[84px] items-center rounded-2xl border-2 border-primary bg-card px-6 text-[32px] font-bold tracking-[0.12em] shadow-soft">
+          <input aria-label="Visitor pass code" autoCapitalize="none" autoComplete="off" value={digits} onChange={(event) => setDigits(event.target.value.trim())} placeholder="Paste or type your pass code" className="h-[84px] w-full rounded-2xl border-2 border-primary bg-card px-5 text-[20px] font-bold shadow-soft outline-none focus:ring-4 focus:ring-primary/15" />
+          <div className="hidden">
             <span className="text-muted-foreground">VIS-</span>
             {Array.from({ length: 4 }).map((_, i) => (
               <span key={i} className={cn("w-[1.1em] text-center", !digits[i] && "text-border")}>
@@ -388,9 +423,9 @@ function CodeScreen({ mode }: { mode: "signin" | "signout" }) {
           </div>
           <div className="mt-6 flex flex-col gap-4">
             <Btn
-              disabled={digits.length < 4}
+              disabled={digits.length < 20}
               onClick={() => {
-                update({ code: `VIS-${digits}` });
+                update({ code: digits });
                 go(mode === "signin" ? "si-verifying" : "so-verifying");
               }}
             >
@@ -405,7 +440,7 @@ function CodeScreen({ mode }: { mode: "signin" | "signout" }) {
           </div>
         </div>
         <Keypad
-          onDigit={(d) => setDigits((v) => (v.length < 4 ? v + d : v))}
+          onDigit={(d) => setDigits((v) => (v.length < 64 ? v + d : v))}
           onBackspace={() => setDigits((v) => v.slice(0, -1))}
           onClear={() => setDigits("")}
         />
@@ -415,46 +450,56 @@ function CodeScreen({ mode }: { mode: "signin" | "signout" }) {
 }
 
 /* ================= VERIFICATION ================= */
-type Check = { ok: true; pass: Pass } | { ok: false; reason: FailReason };
-function checkPass(code = ""): Check {
-  if (!/^VIS-\d{4}$/.test(code)) return { ok: false, reason: "invalid" };
-  const pass = PASSES.find((p) => p.id === code);
-  if (!pass) return { ok: false, reason: "notfound" };
-  if (pass.kind !== "valid") return { ok: false, reason: pass.kind };
-  return { ok: true, pass };
+function mapApiPass(visit: ApiVisit, code: string): Pass {
+  const starts = new Date(visit.starts_at);
+  const ends = new Date(visit.ends_at);
+  return {
+    id: code, name: visit.visitor_name, phone: visit.visitor_phone || "",
+    host: { id: visit.host_id, employeeId: "", name: visit.host_name, dept: visit.host_department },
+    hostEmployeeId: "", department: visit.host_department, purposeCategory: visit.purpose,
+    purposeDetails: visit.purpose, slot: `${starts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to ${ends.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+    startHour: starts.getHours(), durationMinutes: Math.round((ends.getTime() - starts.getTime()) / 60000),
+    purpose: visit.purpose, type: "Guest", kind: "valid", approvalStatus: "Approved",
+  };
 }
 
 function Verifying({ mode }: { mode: "signin" | "signout" }) {
-  const { session, go, update, visits, addHelp } = useKiosk();
+  const { session, go, update } = useKiosk();
   useEffect(() => {
-    const t = setTimeout(() => {
-      const r = checkPass(session.code);
-      if (!r.ok) {
-        if (r.reason === "blocked") addHelp("Blocked visitor alert");
-        update({ failReason: r.reason });
-        go("fail");
-        return;
-      }
-      const v = visits[r.pass.id] ?? { status: "invited" as const };
-      update({ pass: r.pass, name: r.pass.name, phone: r.pass.phone });
-      if (mode === "signin") {
-        if (v.status === "out-temp") return go("si-reentry");
-        if (v.status !== "invited") {
-          update({ failReason: "used" });
-          return go("fail");
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const visit = await verifyPass(session.code || "");
+        if (cancelled) return;
+        const pass = mapApiPass(visit, session.code || "");
+        update({ pass, name: pass.name, phone: pass.phone });
+        if (mode === "signin") {
+          if (visit.status === "checked-in") return go("si-reentry");
+          if (visit.status !== "scheduled") {
+            update({ failReason: "used" });
+            return go("fail");
+          }
+          update({ early: new Date() < new Date(visit.starts_at) });
+          go("si-welcome");
+        } else {
+          if (visit.status === "checked-out") return go("so-already");
+          if (visit.status !== "checked-in") {
+            update({ failReason: "notcheckedin" });
+            return go("fail");
+          }
+          go("so-choose");
         }
-        update({ early: new Date().getHours() < r.pass.startHour });
-        go(r.pass.needsApproval ? "waiting" : "si-welcome");
-      } else {
-        if (v.status === "signed-out") return go("so-already");
-        if (v.status === "invited") {
-          update({ failReason: "notcheckedin" });
-          return go("fail");
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message.toLowerCase() : "";
+        if (message.includes("fetch") || message.includes("network")) go("network");
+        else {
+          update({ failReason: message.includes("expired") ? "expired" : "notfound" });
+          go("fail");
         }
-        go("so-choose");
       }
-    }, 1500);
-    return () => clearTimeout(t);
+    }, 350);
+    return () => { cancelled = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
@@ -641,9 +686,17 @@ function Welcome() {
   const info = useVisitInfo();
   const [showMore, setShowMore] = useState(false);
 
-  const print = () => {
+  const print = async () => {
     const id = session.pass?.id ?? `WALK-${Math.floor(1000 + Math.random() * 9000)}`;
-    if (session.pass) setVisit(id, { ...visits[id], status: "in", checkInAt: Date.now() });
+    if (session.pass) {
+      try {
+        await checkInPass(id);
+        setVisit(id, { ...visits[id], status: "in", checkInAt: Date.now() });
+      } catch {
+        go("network");
+        return;
+      }
+    }
     update({ badgeNo: `B-${Math.floor(10000 + Math.random() * 89999)}` });
     go("printing");
   };
@@ -1081,7 +1134,7 @@ function Details() {
             {F({ f: "phone", label: "Mobile number", placeholder: "10-digit number" })}
             {F({ f: "company", label: "Company", opt: true, placeholder: "Where you work" })}
           </div>
-          <Btn className="mt-6 w-full" disabled={!valid} onClick={() => go("wi-otp")}>
+          <Btn className="mt-6 w-full" disabled={!valid} onClick={() => go("wi-purpose")}>
             Continue <ArrowRight className="h-5 w-5" />
           </Btn>
           {!valid && (
@@ -1288,7 +1341,7 @@ function Purpose() {
         onBack={() => go("wi-details")}
         onCancel={() => {}}
         steps={WI_STEPS}
-        current={2}
+        current={1}
       />
       <div className="grid flex-1 grid-cols-[1.1fr_1fr] items-center gap-10">
         <div className="flex flex-col justify-center">
@@ -1417,8 +1470,9 @@ function HostStep() {
   const { session, update, go, setHelpOpen } = useKiosk();
   const [digits, setDigits] = useState("");
   const [matched, setMatched] = useState<Host | null>(null);
+  const [directoryError, setDirectoryError] = useState("");
   const [notFound, setNotFound] = useState(false);
-  const [failedCount, setFailedCount] = useState(0);
+  const failedCountRef = useRef(0);
   const [cooldown, setCooldown] = useState(0);
 
   const delivery = session.purpose === "Delivery";
@@ -1436,21 +1490,28 @@ function HostStep() {
     return () => clearInterval(t);
   }, [cooldown]);
 
-  const runLookup = (num: string) => {
+  const runLookup = async (num: string) => {
     if (num.length !== 4) return;
     const fullId = `EMP-${num}`;
-    const found = EMPLOYEES.find((e) => e.employeeId === fullId);
-    if (found) {
-      setMatched(found);
-      setNotFound(false);
-    } else {
+    try {
+      const rows = await searchKioskHosts(fullId);
+      const found = rows.find((host) => host.employee_id.toUpperCase() === fullId);
+      if (found) {
+        setMatched({ id: found.id, employeeId: found.employee_id, name: found.name, dept: found.department });
+        setNotFound(false);
+        setDirectoryError("");
+        failedCountRef.current = 0;
+        return;
+      }
       setMatched(null);
       setNotFound(true);
-      const nextFail = failedCount + 1;
-      setFailedCount(nextFail);
+      const nextFail = failedCountRef.current + 1;
+      failedCountRef.current = nextFail;
       if (nextFail >= 5) {
         setCooldown(30);
       }
+    } catch (error) {
+      setDirectoryError(error instanceof Error ? error.message : "Host directory unavailable.");
     }
   };
 
@@ -1486,7 +1547,7 @@ function HostStep() {
           onBack={() => go("wi-purpose")}
           onCancel={() => {}}
           steps={WI_STEPS}
-          current={3}
+          current={2}
         />
         <div className="mx-auto flex w-full max-w-[860px] flex-1 flex-col justify-center">
           <Heading
@@ -1526,7 +1587,7 @@ function HostStep() {
         onBack={() => go("wi-purpose")}
         onCancel={() => {}}
         steps={WI_STEPS}
-        current={3}
+        current={2}
       />
       <div className="grid flex-1 grid-cols-2 items-center gap-16">
         <div>
@@ -1534,6 +1595,7 @@ function HostStep() {
             title={interview ? "Who is your recruiter or HR contact?" : "Who are you meeting?"}
             sub={helperText}
           />
+          {directoryError && <p role="alert" className="mb-3 text-[13px] text-destructive">{directoryError}</p>}
 
           {/* If 5 failed attempts: pause for 30 seconds */}
           {cooldown > 0 ? (
@@ -1657,7 +1719,7 @@ function HostStep() {
 }
 
 function Consent() {
-  const { go } = useKiosk();
+  const { go, update } = useKiosk();
   const [a, setA] = useState(false);
   const [b, setB] = useState(false);
   const Box = ({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: string }) => (
@@ -1678,7 +1740,7 @@ function Consent() {
   );
   return (
     <Page>
-      <FlowHeader onBack={() => go("wi-host")} onCancel={() => {}} steps={WI_STEPS} current={4} />
+      <FlowHeader onBack={() => go("wi-host")} onCancel={() => {}} steps={WI_STEPS} current={3} />
       <div className="grid flex-1 grid-cols-[1.2fr_1fr] gap-10">
         <div className="flex min-h-0 flex-col">
           <Heading title="Almost there" sub="Please read and agree to continue." />
@@ -1710,7 +1772,7 @@ function Consent() {
         <div className="flex flex-col justify-end gap-4">
           <Box on={a} set={setA} label="I agree to the privacy notice" />
           <Box on={b} set={setB} label="I agree to the non-disclosure agreement" />
-          <Btn className="mt-4" disabled={!a || !b} onClick={() => go("wi-review")}>
+          <Btn className="mt-4" disabled={!a || !b} onClick={() => { update({ consentAccepted: a, ndaAccepted: b }); go("wi-review"); }}>
             Continue <ArrowRight className="h-5 w-5" />
           </Btn>
           <button
@@ -1756,6 +1818,31 @@ function ConsentDeclined() {
 
 function Review() {
   const { session, go, update } = useKiosk();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const submit = async () => {
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      if (!session.host?.id || !KIOSK_SITE_ID) throw new Error("Please select a host and ask reception to configure this kiosk site.");
+      const visit = await submitWalkIn({
+        visitor_name: session.name,
+        visitor_phone: session.phone,
+        company: session.company || undefined,
+        host_id: session.host.id,
+        site_id: KIOSK_SITE_ID,
+        purpose: session.purpose === "Other" && session.purposeDetails ? session.purposeDetails : session.purpose || "Visit",
+        consent_accepted: session.consentAccepted === true,
+        nda_accepted: session.ndaAccepted === true,
+      });
+      update({ visitRequestId: visit.id, pass: undefined });
+      go("waiting");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Your request could not be submitted.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
   const hostText = session.host
     ? `${session.host.name}, ${session.host.dept}`
     : session.dept
@@ -1783,7 +1870,7 @@ function Review() {
         onBack={() => go("wi-consent")}
         onCancel={() => {}}
         steps={WI_STEPS}
-        current={5}
+        current={4}
       />
       <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col justify-center">
         <Heading title="Does this look right?" sub="Tap Edit to change anything." />
@@ -1803,15 +1890,8 @@ function Review() {
             </div>
           ))}
         </div>
-        <Btn
-          className="mt-6"
-          onClick={() => {
-            update({ pass: undefined });
-            go("waiting");
-          }}
-        >
-          Submit
-        </Btn>
+        {submitError && <p role="alert" className="mt-3 text-[13px] text-destructive">{submitError}</p>}
+        <Btn className="mt-6" disabled={submitting} onClick={submit}>{submitting ? "Submitting…" : "Submit"}</Btn>
       </div>
     </Page>
   );
@@ -1824,6 +1904,32 @@ function Waiting() {
   const walkin = session.flow === "walkin";
   const hostName = session.hostUnsure ? "reception" : info.hostShort;
   const left = useCountdown(45, () => go("noresponse"));
+  useEffect(() => {
+    if (!walkin || !session.visitRequestId) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const request = await getKioskRequest(session.visitRequestId!);
+        if (cancelled) return;
+        if (request.status === "scheduled" && request.pass_code) {
+          const visit = await verifyPass(request.pass_code);
+          if (cancelled) return;
+          const pass = mapApiPass(visit, request.pass_code);
+          update({ pass, code: request.pass_code, name: pass.name, phone: pass.phone });
+          go("approved");
+          return;
+        }
+        if (request.status === "rejected" || request.status === "cancelled") {
+          go("declined");
+          return;
+        }
+      } catch { /* retry on the next poll; the kiosk view shows a timeout if it stays offline */ }
+      timer = setTimeout(poll, 3000);
+    };
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [walkin, session.visitRequestId, go, update]);
   useEffect(() => {
     if (!waitingSignal) return;
     signalWaiting(null);
@@ -2075,8 +2181,14 @@ function TempOut() {
 function Confirm() {
   const { session, go, update, visits, setVisit } = useKiosk();
   const p = session.pass;
-  const confirm = () => {
+  const confirm = async () => {
     if (!p) return;
+    try {
+      await checkOutPass(p.id);
+    } catch {
+      go("network");
+      return;
+    }
     const v = visits[p.id] ?? { status: "in" as const };
     const mins = Math.max(
       1,
@@ -2169,7 +2281,7 @@ function Already() {
 
 /* ================= SYSTEM ================= */
 function Network() {
-  const { endSession, update, go } = useKiosk();
+  const { session, endSession, update, go } = useKiosk();
   return (
     <Page>
       <FlowHeader />
@@ -2179,7 +2291,7 @@ function Network() {
         title="We cannot connect right now."
         message="Please go to the reception desk, or try again in a moment."
       >
-        <Btn className="min-w-[180px]" onClick={() => endSession()}>
+        <Btn className="min-w-[180px]" onClick={() => session.code ? go(session.flow === "signout" ? "so-verifying" : "si-verifying") : endSession()}>
           Retry
         </Btn>
         <Btn
@@ -2446,18 +2558,6 @@ export function CurrentScreen() {
       return <Success />;
     case "wi-details":
       return <Details />;
-    case "wi-otp":
-      return (
-        <OtpScreen
-          phone={session.phone}
-          steps={WI_STEPS}
-          current={1}
-          cooldownReturn="wi-otp"
-          onBack={() => go("wi-details")}
-          onChange={() => go("wi-details")}
-          onSuccess={() => go("wi-purpose")}
-        />
-      );
     case "so-otp":
       return (
         <OtpScreen

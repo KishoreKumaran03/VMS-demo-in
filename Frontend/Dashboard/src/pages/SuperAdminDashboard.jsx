@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 
 export const SuperAdminDashboard = () => {
-  const { sites, auditLogs, addSite, showToast } = useVms();
+  const { sites, auditLogs, addSite, showToast, summary } = useVms();
   const [activeTab, setActiveTab] = useState('overview');
   const [siteSearch, setSiteSearch] = useState('');
   const [auditFilter, setAuditFilter] = useState('all');
@@ -32,14 +32,15 @@ export const SuperAdminDashboard = () => {
     }, 1200);
   };
 
-  const handleCreateSite = (e) => {
+  const handleCreateSite = async (e) => {
     e.preventDefault();
     if (!newSiteName.trim() || !newSiteCity.trim()) {
       showToast('Please fill out required campus information');
       return;
     }
 
-    addSite({
+    try {
+      await addSite({
       name: newSiteName.trim(),
       location: newSiteCity.trim(),
       district: 'Regional Headquarters',
@@ -50,7 +51,11 @@ export const SuperAdminDashboard = () => {
       kiosksOnline: 4,
       kiosksOffline: 0,
       readersSyncPercent: 100,
-    });
+      });
+    } catch (error) {
+      showToast(error.message || 'The site could not be created.');
+      return;
+    }
 
     setNewSiteName('');
     setNewSiteCity('');
@@ -172,11 +177,9 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">14</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">{summary.site_count}</span>
             <div className="flex items-center gap-1 mt-1">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-primary">
-                +2 this mo
-              </span>
+              <span className="text-slate-500 text-[11px]">Registered sites</span>
             </div>
           </div>
         </div>
@@ -190,7 +193,7 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">1,842</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">{summary.user_count}</span>
             <div className="flex items-center gap-1 mt-1">
               <span className="text-slate-500 text-[11px] truncate">Across campuses</span>
             </div>
@@ -206,10 +209,9 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">486</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">{summary.visitors_today}</span>
             <div className="flex items-center gap-1 mt-1 text-primary">
-              <span className="material-symbols-outlined text-[13px]">trending_up</span>
-              <span className="text-[11px] font-semibold">+18.4% vs avg</span>
+              <span className="text-[11px] font-semibold">Expected and completed today</span>
             </div>
           </div>
         </div>
@@ -223,11 +225,9 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-red-600 tracking-tight">28</span>
+            <span className="text-2xl font-bold text-red-600 tracking-tight">{summary.pending}</span>
             <div className="flex items-center gap-1 mt-1">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700">
-                Site queue
-              </span>
+                <span className="text-slate-500 text-[11px]">Pending approvals</span>
             </div>
           </div>
         </div>
@@ -268,53 +268,12 @@ export const SuperAdminDashboard = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          site.utilizationPercent > 85
-                            ? 'bg-red-500 animate-pulse'
-                            : site.utilizationPercent > 50
-                            ? 'bg-primary'
-                            : 'bg-secondary'
-                        }`}
-                      ></span>
+                      <span className="w-2 h-2 rounded-full bg-secondary"></span>
                       <span className="text-xs font-semibold text-slate-900">{site.name}</span>
                     </div>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        site.utilizationPercent > 85
-                          ? 'bg-red-50 text-red-700 border border-red-200'
-                          : site.utilizationPercent > 50
-                          ? 'bg-blue-50 text-primary border border-blue-200'
-                          : 'bg-slate-200/60 text-slate-700'
-                      }`}
-                    >
-                      {site.utilizationPercent}%{' '}
-                      {site.utilizationPercent > 85
-                        ? 'High Load'
-                        : site.utilizationPercent > 50
-                        ? 'Nominal'
-                        : 'Optimal'}
-                    </span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 text-slate-700">{site.activeEntries} on site</span>
                   </div>
-
-                  {/* Progress track */}
-                  <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        site.utilizationPercent > 85
-                          ? 'bg-red-500'
-                          : site.utilizationPercent > 50
-                          ? 'bg-primary'
-                          : 'bg-secondary'
-                      }`}
-                      style={{ width: `${site.utilizationPercent}%` }}
-                    ></div>
-                  </div>
-
-                  <div className="flex justify-between items-center text-slate-500 text-[11px]">
-                    <span>{site.activeEntries} active entries</span>
-                    <span>Capacity: {site.capacityMax} max</span>
-                  </div>
+                  <p className="text-slate-500 text-[11px]">Live check-in count</p>
                 </div>
               ))}
             </div>
@@ -406,28 +365,20 @@ export const SuperAdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <div>
                     <p className="text-[11px] text-slate-500">Site Facility Lead</p>
-                    <p className="font-semibold text-slate-900">{site.siteLead}</p>
+                    <p className="font-semibold text-slate-900">{site.siteLead || 'Not assigned'}</p>
                   </div>
                   <div>
                     <p className="text-[11px] text-slate-500">Check-in Kiosks</p>
-                    <p className="font-semibold text-slate-900">
-                      {site.kiosksOnline} Online / {site.kiosksOffline} Offline
-                    </p>
+                    <p className="font-semibold text-slate-900">Not configured</p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-xs">
                   <div className="flex items-center gap-1.5 text-slate-500">
                     <span className="material-symbols-outlined text-[16px] text-primary">sensors</span>
-                    <span>Badge Readers Sync: {site.readersSyncPercent}%</span>
+                    <span>Badge readers: Not configured</span>
                   </div>
-                  <button
-                    onClick={() => showToast(`Configuring gateway rules for ${site.name}`)}
-                    className="text-primary hover:underline font-semibold flex items-center gap-0.5"
-                  >
-                    <span>Manage</span>
-                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                  </button>
+                  <span className="text-slate-400 text-[11px]">Gateway integration pending</span>
                 </div>
               </div>
             ))}

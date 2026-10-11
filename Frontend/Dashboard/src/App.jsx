@@ -63,6 +63,17 @@ const AppLayout = ({ children }) => {
   );
 };
 
+const RoleRoute = ({ role, children }) => {
+  const { currentUser, authLoading } = useVms();
+  if (authLoading) return <div className="min-h-screen grid place-items-center text-sm text-slate-500">Restoring your sign-in…</div>;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.role !== role) {
+    const route = ({ 'super-admin': '/super-admin', 'site-admin': '/site-admin', host: '/host', receptionist: '/receptionist' })[currentUser.role];
+    return <Navigate to={route || '/login'} replace />;
+  }
+  return children;
+};
+
 export default function App() {
   return (
     <VmsProvider>
@@ -70,10 +81,10 @@ export default function App() {
         <AppLayout>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/super-admin" element={<SuperAdminDashboard />} />
-            <Route path="/site-admin" element={<SiteAdminDashboard />} />
-            <Route path="/host" element={<HostDashboard />} />
-            <Route path="/receptionist" element={<ReceptionistDashboard />} />
+            <Route path="/super-admin" element={<RoleRoute role="super-admin"><SuperAdminDashboard /></RoleRoute>} />
+            <Route path="/site-admin" element={<RoleRoute role="site-admin"><SiteAdminDashboard /></RoleRoute>} />
+            <Route path="/host" element={<RoleRoute role="host"><HostDashboard /></RoleRoute>} />
+            <Route path="/receptionist" element={<RoleRoute role="receptionist"><ReceptionistDashboard /></RoleRoute>} />
             {/* Default redirect to Login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />

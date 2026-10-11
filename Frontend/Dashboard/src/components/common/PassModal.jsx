@@ -1,5 +1,6 @@
 import React from 'react';
 import { useVms } from '../../context/VmsContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const PassModal = ({ pass, onClose }) => {
   const { showToast } = useVms();
@@ -7,7 +8,7 @@ export const PassModal = ({ pass, onClose }) => {
   if (!pass) return null;
 
   const handleShare = () => {
-    const text = `VMS Digital Pass: https://vms.corp/pass/${pass.id} (${pass.visitorName})`;
+    const text = pass.passCode || pass.id;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
       showToast(`Pass link for #${pass.id} copied to clipboard!`);
@@ -53,7 +54,7 @@ export const PassModal = ({ pass, onClose }) => {
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col items-center justify-center gap-3">
           {/* SVG Crisp QR Graphic */}
           <div className="w-44 h-44 bg-white rounded-xl p-3 shadow-inner flex items-center justify-center border border-slate-100">
-            <svg
+            <QRCodeSVG value={pass.passCode || pass.id} size={152} level="M" includeMargin
               className="w-full h-full text-slate-900"
               fill="currentColor"
               viewBox="0 0 100 100"
@@ -83,7 +84,7 @@ export const PassModal = ({ pass, onClose }) => {
               <rect height="6" width="6" x="76" y="65" />
               <rect height="10" width="10" x="85" y="78" />
               <rect height="6" width="8" x="72" y="88" />
-            </svg>
+            </QRCodeSVG>
           </div>
           <div className="flex items-center gap-1.5 text-primary text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
