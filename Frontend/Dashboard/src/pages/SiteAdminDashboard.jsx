@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
-import { VisitorPass } from '../types/vms';
 import { PassModal } from '../components/common/PassModal';
 
-export const SiteAdminDashboard: React.FC = () => {
+export const SiteAdminDashboard = () => {
   const { passes, approvePass, rejectPass, addPassRequest, showToast } = useVms();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPassForModal, setSelectedPassForModal] = useState<VisitorPass | null>(null);
+  const [selectedPassForModal, setSelectedPassForModal] = useState(null);
   const [showNewPassModal, setShowNewPassModal] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
 
@@ -28,7 +27,7 @@ export const SiteAdminDashboard: React.FC = () => {
     }, 600);
   };
 
-  const handleCreatePass = (e: React.FormEvent) => {
+  const handleCreatePass = (e) => {
     e.preventDefault();
     if (!newVisitorName.trim() || !newVisitorEmail.trim()) {
       showToast('Please enter visitor name and email');

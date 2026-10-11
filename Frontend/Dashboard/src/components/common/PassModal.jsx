@@ -1,13 +1,7 @@
 import React from 'react';
-import { VisitorPass } from '../../types/vms';
 import { useVms } from '../../context/VmsContext';
 
-interface PassModalProps {
-  pass: VisitorPass | null;
-  onClose: () => void;
-}
-
-export const PassModal: React.FC<PassModalProps> = ({ pass, onClose }) => {
+export const PassModal = ({ pass, onClose }) => {
   const { showToast } = useVms();
 
   if (!pass) return null;

@@ -5,17 +5,17 @@
 
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { VmsProvider, useVms } from './context/VmsContext';
-import { Header } from './components/common/Header';
-import { NotificationDrawer } from './components/common/NotificationDrawer';
-import { Login } from './pages/Login';
-import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
-import { SiteAdminDashboard } from './pages/SiteAdminDashboard';
-import { HostDashboard } from './pages/HostDashboard';
-import { ReceptionistDashboard } from './pages/ReceptionistDashboard';
-import { WorkflowHelper } from './components/common/WorkflowHelper';
+import { VmsProvider, useVms } from './context/VmsContext.jsx';
+import { Header } from './components/common/Header.jsx';
+import { NotificationDrawer } from './components/common/NotificationDrawer.jsx';
+import { Login } from './pages/Login.jsx';
+import { SuperAdminDashboard } from './pages/SuperAdminDashboard.jsx';
+import { SiteAdminDashboard } from './pages/SiteAdminDashboard.jsx';
+import { HostDashboard } from './pages/HostDashboard.jsx';
+import { ReceptionistDashboard } from './pages/ReceptionistDashboard.jsx';
+import { WorkflowHelper } from './components/common/WorkflowHelper.jsx';
 
-const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AppLayout = ({ children }) => {
   const location = useLocation();
   const { toastMessage } = useVms();
   const [isNotifOpen, setIsNotifOpen] = useState(false);

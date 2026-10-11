@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
-import { VisitorPass } from '../types/vms';
 
-export const ReceptionistDashboard: React.FC = () => {
+export const ReceptionistDashboard = () => {
   const { passes, checkInVisitor, checkOutVisitor, addPassRequest, showToast } = useVms();
 
   const [inputPassId, setInputPassId] = useState('VPASS-9941');
-  const [verifiedPass, setVerifiedPass] = useState<VisitorPass | null>(() => {
+  const [verifiedPass, setVerifiedPass] = useState(() => {
     return passes.find((p) => p.id === 'VPASS-9941') || passes[0] || null;
   });
 
@@ -26,7 +25,7 @@ export const ReceptionistDashboard: React.FC = () => {
 
   // Active board filter & search
   const [boardSearch, setBoardSearch] = useState('');
-  const [boardFilter, setBoardFilter] = useState<'all' | 'recent' | 'overstay' | 'contractor'>('all');
+  const [boardFilter, setBoardFilter] = useState('all');
 
   // Compute live metric counts
   const checkedInList = passes.filter((p) => p.status === 'Checked In');
@@ -34,7 +33,7 @@ export const ReceptionistDashboard: React.FC = () => {
   const activeCount = checkedInList.length;
   const expectedTotal = passes.length;
 
-  const handleVerifyPass = (queryId?: string) => {
+  const handleVerifyPass = (queryId) => {
     const idToSearch = (queryId || inputPassId).trim().toUpperCase();
     if (!idToSearch) {
       showToast('Please enter a Pass ID to verify');
@@ -57,7 +56,7 @@ export const ReceptionistDashboard: React.FC = () => {
     showToast(`Optical barcode scanned: #${idToScan}`);
   };
 
-  const handleCompleteCheckIn = (passId: string) => {
+  const handleCompleteCheckIn = (passId) => {
     const success = checkInVisitor(passId, 'Main Gate Lobby');
     if (success) {
       // Refresh verified pass state

@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
-import { UserRole } from '../../types/vms';
 
-interface WorkflowHelperProps {
-  isOpen?: boolean;
-  onOpen?: () => void;
-  onClose?: () => void;
-}
-
-export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
+export const WorkflowHelper = ({
   isOpen: controlledIsOpen,
   onOpen,
   onClose,
@@ -26,6 +19,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
     if (onClose) onClose();
     else setInternalOpen(false);
   };
+
   const {
     currentUser,
     currentRole,
@@ -40,11 +34,9 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isLoginPage = location.pathname === '/login';
-
   const demoUsers = [
     {
-      role: 'host' as UserRole,
+      role: 'host',
       name: 'Alex Morgan',
       title: 'Host • Lead Architect',
       department: 'Engineering Dept',
@@ -54,7 +46,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
       description: 'Invites guests, requests passes, views digital QR codes',
     },
     {
-      role: 'site-admin' as UserRole,
+      role: 'site-admin',
       name: 'Elena Vance',
       title: 'Site Facility Admin',
       department: 'Campus Security & Facilities',
@@ -64,7 +56,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
       description: 'Approves/rejects clearance queue, turnstiles, pass registry',
     },
     {
-      role: 'receptionist' as UserRole,
+      role: 'receptionist',
       name: 'Claire Davis',
       title: 'Front Desk Operator',
       department: 'Main Gate Lobby Operations',
@@ -74,7 +66,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
       description: 'Scans QR badges, completes check-ins, walk-in OTP wizard',
     },
     {
-      role: 'super-admin' as UserRole,
+      role: 'super-admin',
       name: 'Marcus Vance',
       title: 'Super Admin',
       department: 'Global Infrastructure',
@@ -85,7 +77,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
     },
   ];
 
-  const handleSwitchUser = (target: (typeof demoUsers)[0]) => {
+  const handleSwitchUser = (target) => {
     setCurrentRole(target.role);
     navigate(target.path);
     handleClose();
@@ -314,7 +306,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() =>
-                          handleSwitchUser(demoUsers.find((u) => u.role === 'host')!)
+                          handleSwitchUser(demoUsers.find((u) => u.role === 'host'))
                         }
                         className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700"
                       >
@@ -349,7 +341,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() =>
-                          handleSwitchUser(demoUsers.find((u) => u.role === 'site-admin')!)
+                          handleSwitchUser(demoUsers.find((u) => u.role === 'site-admin'))
                         }
                         className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700"
                       >
@@ -384,7 +376,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() =>
-                          handleSwitchUser(demoUsers.find((u) => u.role === 'host')!)
+                          handleSwitchUser(demoUsers.find((u) => u.role === 'host'))
                         }
                         className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700"
                       >
@@ -412,7 +404,7 @@ export const WorkflowHelper: React.FC<WorkflowHelperProps> = ({
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() =>
-                          handleSwitchUser(demoUsers.find((u) => u.role === 'receptionist')!)
+                          handleSwitchUser(demoUsers.find((u) => u.role === 'receptionist'))
                         }
                         className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700"
                       >

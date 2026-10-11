@@ -1,34 +1,33 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
-import { UserRole } from '../../types/vms';
 
-export const BottomNav: React.FC = () => {
+export const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setCurrentRole } = useVms();
 
   const navItems = [
     {
-      id: 'super-admin' as UserRole,
+      id: 'super-admin',
       path: '/super-admin',
       label: 'Platform',
       icon: 'corporate_fare',
     },
     {
-      id: 'site-admin' as UserRole,
+      id: 'site-admin',
       path: '/site-admin',
       label: 'Campus',
       icon: 'domain_verification',
     },
     {
-      id: 'host' as UserRole,
+      id: 'host',
       path: '/host',
       label: 'Host',
       icon: 'badge',
     },
     {
-      id: 'receptionist' as UserRole,
+      id: 'receptionist',
       path: '/receptionist',
       label: 'Front Desk',
       icon: 'passkey',
@@ -40,7 +39,7 @@ export const BottomNav: React.FC = () => {
     return null;
   }
 
-  const handleNavClick = (item: (typeof navItems)[0]) => {
+  const handleNavClick = (item) => {
     setCurrentRole(item.id);
     navigate(item.path);
   };

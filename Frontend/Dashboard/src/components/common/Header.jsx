@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
-import { UserRole } from '../../types/vms';
 
-interface HeaderProps {
-  onOpenNotifications: () => void;
-  onOpenWorkflow?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onOpenNotifications, onOpenWorkflow }) => {
+export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, currentRole, unreadNotificationCount, showToast } = useVms();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const getRoleTitle = (role: UserRole) => {
+  const getRoleTitle = (role) => {
     switch (role) {
       case 'super-admin':
         return 'Super Admin';

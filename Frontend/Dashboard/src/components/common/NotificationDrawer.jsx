@@ -1,20 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
-import { UserRole } from '../../types/vms';
 
-interface NotificationDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose }) => {
+export const NotificationDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { notifications, markNotificationsAsRead, clearNotifications, setCurrentRole } = useVms();
 
   if (!isOpen) return null;
 
-  const handleNotificationClick = (linkPath?: string) => {
+  const handleNotificationClick = (linkPath) => {
     if (linkPath) {
       if (linkPath.includes('super-admin')) setCurrentRole('super-admin');
       else if (linkPath.includes('site-admin')) setCurrentRole('site-admin');

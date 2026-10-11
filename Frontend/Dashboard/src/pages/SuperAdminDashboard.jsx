@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
-import { SiteInfo } from '../types/vms';
 
-export const SuperAdminDashboard: React.FC = () => {
+export const SuperAdminDashboard = () => {
   const { sites, auditLogs, addSite, showToast } = useVms();
-  const [activeTab, setActiveTab] = useState<'overview' | 'sites' | 'policies' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState('overview');
   const [siteSearch, setSiteSearch] = useState('');
-  const [auditFilter, setAuditFilter] = useState<'all' | 'warning' | 'policy'>('all');
+  const [auditFilter, setAuditFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
@@ -33,7 +32,7 @@ export const SuperAdminDashboard: React.FC = () => {
     }, 1200);
   };
 
-  const handleCreateSite = (e: React.FormEvent) => {
+  const handleCreateSite = (e) => {
     e.preventDefault();
     if (!newSiteName.trim() || !newSiteCity.trim()) {
       showToast('Please fill out required campus information');
@@ -162,7 +161,7 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Compact Metric Summary Cards (Always visible as in Image 3) */}
+      {/* 4 Compact Metric Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Metric 1: Total Sites */}
         <div className="bg-white p-3.5 rounded-2xl shadow-xs border border-slate-100 flex flex-col justify-between">

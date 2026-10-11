@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVms } from '../context/VmsContext';
-import { UserRole } from '../types/vms';
 
-export const Login: React.FC = () => {
+export const Login = () => {
   const navigate = useNavigate();
   const { setCurrentRole, showToast } = useVms();
 
   // Portal modes: 'super-admin' | 'admin' | 'host-desk'
-  const [selectedPortal, setSelectedPortal] = useState<'super-admin' | 'admin' | 'host-desk'>('admin');
-  const [deskSubRole, setDeskSubRole] = useState<'host' | 'receptionist'>('host');
+  const [selectedPortal, setSelectedPortal] = useState('admin');
+  const [deskSubRole, setDeskSubRole] = useState('host');
 
   const [email, setEmail] = useState('building-a.lead@enterprise-vms.global');
   const [password, setPassword] = useState('••••••••••••••');
@@ -18,7 +17,7 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Update credentials based on selected role
-  const handlePortalChange = (portal: 'super-admin' | 'admin' | 'host-desk') => {
+  const handlePortalChange = (portal) => {
     setSelectedPortal(portal);
     if (portal === 'super-admin') {
       setEmail('super.admin@enterprise-vms.global');
@@ -33,7 +32,7 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleDeskSubRoleChange = (subRole: 'host' | 'receptionist') => {
+  const handleDeskSubRoleChange = (subRole) => {
     setDeskSubRole(subRole);
     if (subRole === 'host') {
       setEmail('alex.morgan@enterprise-vms.global');
@@ -58,11 +57,11 @@ export const Login: React.FC = () => {
     showToast('Demo credentials autofilled');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    let targetRole: UserRole = 'site-admin';
+    let targetRole = 'site-admin';
     let targetPath = '/site-admin';
 
     if (selectedPortal === 'super-admin') {

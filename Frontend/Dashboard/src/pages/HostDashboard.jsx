@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
-import { VisitorPass } from '../types/vms';
 import { PassModal } from '../components/common/PassModal';
 
-export const HostDashboard: React.FC = () => {
+export const HostDashboard = () => {
   const {
     currentUser,
     passes,
@@ -13,15 +12,15 @@ export const HostDashboard: React.FC = () => {
     showToast,
   } = useVms();
 
-  const [filter, setFilter] = useState<'all' | 'active' | 'approved' | 'pending'>('all');
+  const [filter, setFilter] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedPassForModal, setSelectedPassForModal] = useState<VisitorPass | null>(null);
+  const [selectedPassForModal, setSelectedPassForModal] = useState(null);
 
   // Form state
   const [vName, setVName] = useState('');
   const [vEmail, setVEmail] = useState('');
   const [vPhone, setVPhone] = useState('');
-  const [vCategory, setVCategory] = useState<VisitorPass['category']>('Customer');
+  const [vCategory, setVCategory] = useState('Customer');
   const [vDate, setVDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [vTime, setVTime] = useState('14:30');
   const [vPurpose, setVPurpose] = useState('');
@@ -44,7 +43,7 @@ export const HostDashboard: React.FC = () => {
     return true;
   });
 
-  const handleInviteSubmit = (e: React.FormEvent) => {
+  const handleInviteSubmit = (e) => {
     e.preventDefault();
     if (!vName.trim() || !vEmail.trim() || !vPurpose.trim()) {
       showToast('Please fill all required fields');
@@ -454,7 +453,7 @@ export const HostDashboard: React.FC = () => {
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-slate-700">Visitor Category *</label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {(['Customer', 'Vendor', 'Interview', 'VIP', 'Contractor'] as const).map(
+                  {['Customer', 'Vendor', 'Interview', 'VIP', 'Contractor'].map(
                     (cat) => (
                       <button
                         key={cat}

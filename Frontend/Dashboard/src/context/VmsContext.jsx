@@ -1,42 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { VisitorPass, SiteInfo, AuditLogItem, SystemNotification, UserRole } from '../types/vms';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface VmsContextType {
-  currentUser: {
-    name: string;
-    email: string;
-    role: UserRole;
-    department: string;
-    avatarUrl: string;
-  };
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
-  passes: VisitorPass[];
-  sites: SiteInfo[];
-  auditLogs: AuditLogItem[];
-  notifications: SystemNotification[];
-  unreadNotificationCount: number;
-  markNotificationsAsRead: () => void;
-  clearNotifications: () => void;
-  toastMessage: string | null;
-  showToast: (msg: string) => void;
-  addPassRequest: (pass: Omit<VisitorPass, 'id' | 'status'>) => VisitorPass;
-  approvePass: (id: string) => void;
-  rejectPass: (id: string, reason?: string) => void;
-  checkInVisitor: (id: string, gate?: string) => boolean;
-  checkOutVisitor: (id: string) => void;
-  addSite: (site: Omit<SiteInfo, 'id' | 'utilizationPercent'>) => void;
-  liveLobbyAlert: {
-    visible: boolean;
-    visitorName: string;
-    location: string;
-    time: string;
-  } | null;
-  dismissLiveLobbyAlert: () => void;
-  resetDemoData: () => void;
-}
-
-const INITIAL_PASSES: VisitorPass[] = [
+const INITIAL_PASSES = [
   {
     id: 'VPASS-9941',
     visitorName: 'David Miller',
@@ -263,7 +227,7 @@ const INITIAL_PASSES: VisitorPass[] = [
   },
 ];
 
-const INITIAL_SITES: SiteInfo[] = [
+const INITIAL_SITES = [
   {
     id: 'site-1',
     name: 'Tech Park Campus A',
@@ -322,7 +286,7 @@ const INITIAL_SITES: SiteInfo[] = [
   },
 ];
 
-const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
+const INITIAL_AUDIT_LOGS = [
   {
     id: 'log-1',
     timestamp: '14:28:12 UTC',
@@ -353,7 +317,7 @@ const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   },
 ];
 
-const INITIAL_NOTIFICATIONS: SystemNotification[] = [
+const INITIAL_NOTIFICATIONS = [
   {
     id: 'notif-1',
     timestamp: '10:15 AM',
@@ -383,14 +347,14 @@ const INITIAL_NOTIFICATIONS: SystemNotification[] = [
   },
 ];
 
-const VmsContext = createContext<VmsContextType | null>(null);
+const VmsContext = createContext(null);
 
-export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentRole, setCurrentRoleState] = useState<UserRole>(() => {
-    return (localStorage.getItem('vms_current_role') as UserRole) || 'super-admin';
+export const VmsProvider = ({ children }) => {
+  const [currentRole, setCurrentRoleState] = useState(() => {
+    return localStorage.getItem('vms_current_role') || 'super-admin';
   });
 
-  const [passes, setPasses] = useState<VisitorPass[]>(() => {
+  const [passes, setPasses] = useState(() => {
     const saved = localStorage.getItem('vms_passes');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
@@ -398,7 +362,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return INITIAL_PASSES;
   });
 
-  const [sites, setSites] = useState<SiteInfo[]>(() => {
+  const [sites, setSites] = useState(() => {
     const saved = localStorage.getItem('vms_sites');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
@@ -406,7 +370,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return INITIAL_SITES;
   });
 
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(() => {
+  const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem('vms_audit_logs');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
@@ -414,7 +378,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return INITIAL_AUDIT_LOGS;
   });
 
-  const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
+  const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem('vms_notifications');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
@@ -422,13 +386,8 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return INITIAL_NOTIFICATIONS;
   });
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [liveLobbyAlert, setLiveLobbyAlert] = useState<{
-    visible: boolean;
-    visitorName: string;
-    location: string;
-    time: string;
-  } | null>({
+  const [toastMessage, setToastMessage] = useState(null);
+  const [liveLobbyAlert, setLiveLobbyAlert] = useState({
     visible: true,
     visitorName: 'Chloe Bennett',
     location: 'East Lobby Reception • Waiting in Lounge B',
@@ -456,11 +415,11 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('vms_audit_logs', JSON.stringify(auditLogs));
   }, [auditLogs]);
 
-  const setCurrentRole = (role: UserRole) => {
+  const setCurrentRole = (role) => {
     setCurrentRoleState(role);
   };
 
-  const showToast = (msg: string) => {
+  const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
@@ -480,10 +439,10 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Workflow Action 1: Host creates a pass request
-  const addPassRequest = (passData: Omit<VisitorPass, 'id' | 'status'>): VisitorPass => {
+  const addPassRequest = (passData) => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const newId = `VPASS-${randomNum}`;
-    const newPass: VisitorPass = {
+    const newPass = {
       ...passData,
       id: newId,
       status: 'Pending Review',
@@ -492,7 +451,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPasses((prev) => [newPass, ...prev]);
 
     // Push notification to site admin
-    const newNotif: SystemNotification = {
+    const newNotif = {
       id: `notif-${Date.now()}`,
       timestamp: 'Just now',
       title: `Pass Request for ${newPass.visitorName}`,
@@ -521,7 +480,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Workflow Action 2: Site Admin approves pass
-  const approvePass = (id: string) => {
+  const approvePass = (id) => {
     setPasses((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -535,7 +494,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const vName = approvedPass ? approvedPass.visitorName : id;
 
     // Push notification to host
-    const newNotif: SystemNotification = {
+    const newNotif = {
       id: `notif-${Date.now()}`,
       timestamp: 'Just now',
       title: `Pass Approved: ${vName}`,
@@ -562,7 +521,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Workflow Action 2b: Site Admin rejects pass
-  const rejectPass = (id: string, reason = 'Administrative review denied access') => {
+  const rejectPass = (id, reason = 'Administrative review denied access') => {
     setPasses((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -575,7 +534,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const rejectedPass = passes.find((p) => p.id === id);
     const vName = rejectedPass ? rejectedPass.visitorName : id;
 
-    const newNotif: SystemNotification = {
+    const newNotif = {
       id: `notif-${Date.now()}`,
       timestamp: 'Just now',
       title: `Pass Rejected: ${vName}`,
@@ -590,7 +549,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Workflow Action 3: Receptionist checks in visitor (verifies pass)
-  const checkInVisitor = (id: string, gate = 'Main Gate Lobby'): boolean => {
+  const checkInVisitor = (id, gate = 'Main Gate Lobby') => {
     const target = passes.find((p) => p.id.toUpperCase() === id.toUpperCase());
     if (!target) {
       showToast(`Pass ID "${id}" not found in system.`);
@@ -632,7 +591,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
 
     // Notify host
-    const newNotif: SystemNotification = {
+    const newNotif = {
       id: `notif-${Date.now()}`,
       timestamp: nowTime,
       title: `${target.visitorName} has arrived`,
@@ -660,7 +619,7 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Workflow Action 4: Receptionist checks out visitor
-  const checkOutVisitor = (id: string) => {
+  const checkOutVisitor = (id) => {
     const target = passes.find((p) => p.id === id);
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -692,8 +651,8 @@ export const VmsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast(`${target ? target.visitorName : 'Visitor'} checked out successfully.`);
   };
 
-  const addSite = (newSiteData: Omit<SiteInfo, 'id' | 'utilizationPercent'>) => {
-    const newSite: SiteInfo = {
+  const addSite = (newSiteData) => {
+    const newSite = {
       ...newSiteData,
       id: `site-${Date.now()}`,
       utilizationPercent: Math.round((newSiteData.activeEntries / newSiteData.capacityMax) * 100),
