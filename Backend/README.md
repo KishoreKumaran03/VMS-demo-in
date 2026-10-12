@@ -12,7 +12,9 @@ FastAPI backend shared by the staff dashboard and visitor kiosk. PostgreSQL stor
    docker compose up --build -d
    ```
 
-The API applies database migrations when it starts. Check the API at [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health). Open [http://localhost:8000/docs](http://localhost:8000/docs) to explore the API.
+On a **new PostgreSQL data volume**, the Postgres image creates the VisitorHub tables from `database/schema.sql`. The API then runs Alembic on startup; the SQL bootstrap records the initial revision, so Alembic can apply later migrations normally. Existing volumes are not reinitialized by the Postgres image, and continue to use Alembic migrations. Keep the SQL bootstrap aligned with `migrations/versions/0001_initial.py` when changing the initial schema.
+
+The schema covers organizations, sites, staff users and roles, hosts, visitors, visits and pass lifecycle, consent timestamps, audit events, and notifications. PostgreSQL UUIDs and timezone-aware timestamps are used throughout. Check the API at [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health). Open [http://localhost:8000/docs](http://localhost:8000/docs) to explore the API.
 
 ## Create accounts
 
