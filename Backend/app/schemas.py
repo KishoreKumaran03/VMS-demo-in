@@ -22,6 +22,10 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AccountUserOut(UserOut):
+    employee_id: str | None = None
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"

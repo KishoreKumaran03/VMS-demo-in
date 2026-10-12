@@ -744,15 +744,18 @@ function Welcome() {
   const [showMore, setShowMore] = useState(false);
 
   const print = async () => {
-    const id = session.pass?.id ?? `WALK-${Math.floor(1000 + Math.random() * 9000)}`;
-    if (session.pass) {
-      try {
-        await checkInPass(id);
-        setVisit(id, { ...visits[id], status: "in", checkInAt: Date.now() });
-      } catch {
-        go("network");
-        return;
-      }
+    const passCode = session.pass?.id;
+    if (!passCode) {
+      go("network");
+      return;
+    }
+    try {
+      const visit = await checkInPass(passCode);
+      if (visit.status !== "checked-in") throw new Error("The visit was not checked in.");
+      setVisit(passCode, { ...visits[passCode], status: "in", checkInAt: Date.now() });
+    } catch {
+      go("network");
+      return;
     }
     update({ badgeNo: `B-${Math.floor(10000 + Math.random() * 89999)}` });
     go("printing");
@@ -1056,6 +1059,7 @@ function Printing() {
 function Badge() {
   const { session, go } = useKiosk();
   const info = useVisitInfo();
+  const passCode = session.pass?.id ?? session.code;
   const badgePurpose =
     session.purpose === "Other" && session.purposeDetails
       ? `Other: ${session.purposeDetails}`
@@ -1073,6 +1077,7 @@ function Badge() {
           type={info.type}
           purpose={badgePurpose}
           badgeNo={session.badgeNo ?? "B-00000"}
+          passCode={passCode ?? ""}
         />
         <Btn className="mt-10 min-w-[280px]" onClick={() => go("success")}>
           I have my badge

@@ -42,7 +42,7 @@ async function dashboardVisits(page: Page) {
     if (!response.ok) throw new Error(`Visit verification failed: ${response.status}`);
     return response.json();
   }, apiUrl) as Promise<
-    Array<{ id: string; visitor_name: string; status: string; pass_code: string | null }>
+    Array<{ id: string; visitor_name: string; host_id: string; status: string; pass_code: string | null }>
   >;
 }
 
@@ -371,14 +371,16 @@ test("host, administrator, and kiosk share the persisted visit lifecycle", async
   }
 });
 
-test("kiosk walk-in is persisted pending until an administrator approves it", async ({
+test("Super Admin-created hosts flow through kiosk search, approval, pass QR, and check-in", async ({
   browser,
 }) => {
   requireTestAccounts();
   const kioskContext = await browser.newContext();
   const adminContext = await browser.newContext();
+  const superadminContext = await browser.newContext();
   const kioskPage = await kioskContext.newPage();
   const adminPage = await adminContext.newPage();
+  const superadminPage = await superadminContext.newPage();
   kioskPage.on("pageerror", (error) =>
     console.error(`Kiosk page error: ${error.stack ?? error.message}`),
   );
@@ -388,15 +390,42 @@ test("kiosk walk-in is persisted pending until an administrator approves it", as
   // Keep the name short because the kiosk intentionally accepts input through
   // its on-screen keyboard and returns home after 45 seconds without approval.
   const visitorName = `Walk ${Date.now() % 100000}`;
-  const employeeSuffix =
-    process.env.VMS_E2E_HOST_EMPLOYEE_SUFFIX ?? process.env.VMS_E2E_HOST_EMPLOYEE_ID?.slice(-4);
-  if (!employeeSuffix || !/^\d{4}$/.test(employeeSuffix)) {
-    throw new Error(
-      "Set VMS_E2E_HOST_EMPLOYEE_SUFFIX to the four digit suffix for a configured kiosk host.",
-    );
-  }
+  const stamp = Date.now();
+  const employeeSuffix = String(stamp % 10000).padStart(4, "0");
+  const employeeId = `EMP-${employeeSuffix}`;
+  const hostName = `E2E Host ${stamp}`;
+  const hostEmailAddress = `e2e-host-${stamp}@example.com`;
+  const hostPasswordValue = `E2E-Host-${stamp}-A!`;
+  let createdHostId: string | undefined;
+  let createdUserId: string | undefined;
 
   try {
+    await login(superadminPage, superadminEmail!, superadminPassword!);
+    await expect(superadminPage).toHaveURL(/\/super-admin$/);
+    await superadminPage.getByRole("button", { name: "Accounts", exact: false }).click();
+    await superadminPage.getByRole("button", { name: "Add account" }).click();
+    await superadminPage.getByLabel("Account type").selectOption("host");
+    await superadminPage.getByLabel("Site").selectOption(siteId!);
+    await superadminPage.getByLabel("Full name").fill(hostName);
+    await superadminPage.getByLabel("Email").fill(hostEmailAddress);
+    await superadminPage.getByLabel("Initial password").fill(hostPasswordValue);
+    await superadminPage.getByLabel("Employee ID").fill(employeeId);
+    await superadminPage.getByLabel("Department").fill("E2E Integration");
+    await superadminPage.getByRole("button", { name: "Create host" }).click();
+    await expect(superadminPage.getByText(hostName, { exact: true })).toBeVisible();
+    await expect(superadminPage.getByText(employeeId, { exact: true })).toBeVisible();
+
+    const users = await dashboardApi(superadminPage, "/users");
+    const userRows = users.body as Array<{ id: string; email: string; employee_id?: string }>;
+    const createdUser = userRows.find((user) => user.email === hostEmailAddress);
+    expect(createdUser?.employee_id).toBe(employeeId);
+    createdUserId = createdUser?.id;
+    const hosts = await dashboardApi(superadminPage, `/hosts?q=${encodeURIComponent(employeeId)}`);
+    const hostRows = hosts.body as Array<{ id: string; employee_id: string }>;
+    const createdHost = hostRows.find((host) => host.employee_id === employeeId);
+    if (!createdHost) throw new Error(`Created host ${employeeId} was not returned by the directory.`);
+    createdHostId = createdHost.id;
+
     await adminPage.goto(`${dashboardUrl}/login`);
     await adminPage.locator('input[type="email"]').fill(adminEmail!);
     await adminPage.locator('input[type="password"]').fill(adminPassword!);
@@ -429,6 +458,10 @@ test("kiosk walk-in is persisted pending until an administrator approves it", as
     await kioskPage.getByRole("button", { name: "Continue", exact: true }).click();
     await kioskPage.getByRole("button", { name: "Submit" }).click();
     await expect(kioskPage.getByText("Waiting for approval")).toBeVisible();
+    const createdVisit = (await dashboardVisits(adminPage)).find(
+      (row) => row.visitor_name === visitorName,
+    );
+    expect(createdVisit?.host_id).toBe(createdHostId);
 
     // The dashboard does not poll the queue continuously; refresh it after the
     // kiosk has persisted the request so the newly created row is loaded.
@@ -443,7 +476,40 @@ test("kiosk walk-in is persisted pending until an administrator approves it", as
     await expect(requestCard.getByRole("button", { name: "Approve Pass" })).toBeVisible();
     await requestCard.getByRole("button", { name: "Approve Pass" }).click();
     await expect(kioskPage.getByText("Your visit is approved.")).toBeVisible({ timeout: 20_000 });
+    await kioskPage.getByRole("button", { name: /Print my badge/ }).click();
+    await expect(kioskPage.getByTestId("visitor-pass-qr")).toBeVisible({ timeout: 10_000 });
+    const passCode = await kioskPage.getByLabel("Visitor pass code").textContent();
+    expect(passCode?.trim().length).toBeGreaterThanOrEqual(24);
+    expect((await dashboardVisits(adminPage)).find((row) => row.visitor_name === visitorName)?.pass_code)
+      .toBe(passCode?.trim());
+    await expect
+      .poll(
+        async () =>
+          (await dashboardVisits(adminPage)).find((row) => row.visitor_name === visitorName)
+            ?.status,
+      )
+      .toBe("checked-in");
+
+    const checkedOut = await dashboardApi(
+      adminPage,
+      `/kiosk/pass/${encodeURIComponent(passCode!.trim())}/check-out`,
+      "POST",
+    );
+    expect(checkedOut.status).toBe(200);
+    await expect
+      .poll(
+        async () =>
+          (await dashboardVisits(adminPage)).find((row) => row.visitor_name === visitorName)
+            ?.status,
+      )
+      .toBe("checked-out");
   } finally {
-    await Promise.all([kioskContext.close(), adminContext.close()]);
+    if (createdHostId) {
+      await dashboardApi(superadminPage, `/hosts/${createdHostId}`, "DELETE").catch(() => undefined);
+    }
+    if (createdUserId) {
+      await dashboardApi(superadminPage, `/users/${createdUserId}`, "DELETE").catch(() => undefined);
+    }
+    await Promise.all([kioskContext.close(), adminContext.close(), superadminContext.close()]);
   }
 });

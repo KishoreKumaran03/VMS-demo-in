@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, joinedload
 
 from .config import get_settings
 from .database import get_db
 from .models import AuditEvent, Host, Notification, Organization, Role, Site, User, Visit, VisitStatus, Visitor, utcnow
-from .schemas import AuditOut, HostAccountCreate, HostAccountOut, HostCreate, HostOut, HostPatch, InitialSignupRequest, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
+from .schemas import AccountUserOut, AuditOut, HostAccountCreate, HostAccountOut, HostCreate, HostOut, HostPatch, InitialSignupRequest, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
 from .security import current_user, decrypt_pass, digest_pass, encrypt_pass, hash_password, issue_token, verify_password
 
 app = FastAPI(title="VisitorHub API", version="1.0.0", openapi_url="/api/v1/openapi.json")
@@ -202,16 +202,24 @@ def deactivate_site(site_id: uuid.UUID, db: Session = Depends(get_db), user: Use
     return Response(status_code=204)
 
 
-@app.get("/api/v1/users", response_model=list[UserOut])
+@app.get("/api/v1/users", response_model=list[AccountUserOut])
 def list_users(db: Session = Depends(get_db), user: User = Depends(current_user)):
     if user.role not in {Role.site_admin, Role.super_admin}:
         raise HTTPException(403, "Your role cannot list user accounts")
-    query = select(User)
+    query = select(User, Host.employee_id).outerjoin(
+        Host,
+        (Host.organization_id == User.organization_id)
+        & (func.lower(Host.email) == func.lower(User.email))
+        & Host.active.is_(True),
+    )
     if user.role != Role.super_admin:
         query = query.where(User.organization_id == user.organization_id)
     if user.site_id and user.role != Role.super_admin:
         query = query.where(User.site_id == user.site_id)
-    return db.scalars(query.order_by(User.full_name)).all()
+    return [
+        {**UserOut.model_validate(account).model_dump(), "employee_id": employee_id}
+        for account, employee_id in db.execute(query.order_by(User.full_name)).all()
+    ]
 
 
 @app.post("/api/v1/users", response_model=UserOut, status_code=201)

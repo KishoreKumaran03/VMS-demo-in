@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { HELP_CODE } from "./data";
 import { SCREEN_NAMES, useKiosk } from "./store";
 import { useMagneticButton } from "./pointer";
+import { QRCodeSVG } from "qrcode.react";
 
 /* ---------- Button ---------- */
 type BtnVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
@@ -721,55 +722,6 @@ export function StatusScreen({
   );
 }
 
-/* ---------- Fake QR ---------- */
-export function FakeQr({ seed, size = 96 }: { seed: string; size?: number }) {
-  const n = 21;
-  let h = 0;
-  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const cells: boolean[] = [];
-  for (let i = 0; i < n * n; i++) {
-    h = (h * 1103515245 + 12345) >>> 0;
-    cells.push(((h >> 16) & 1) === 1);
-  }
-  const finder = (x: number, y: number) => {
-    for (const [fx, fy] of [
-      [0, 0],
-      [n - 7, 0],
-      [0, n - 7],
-    ] as const) {
-      const dx = x - fx,
-        dy = y - fy;
-      if (dx >= 0 && dx < 7 && dy >= 0 && dy < 7)
-        return dx === 0 ||
-          dx === 6 ||
-          dy === 0 ||
-          dy === 6 ||
-          (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4)
-          ? 1
-          : 0;
-    }
-    return -1;
-  };
-  return (
-    <svg
-      viewBox={`0 0 ${n} ${n}`}
-      width={size}
-      height={size}
-      className="fill-foreground"
-      shapeRendering="crispEdges"
-    >
-      {cells.map((on, i) => {
-        const x = i % n,
-          y = Math.floor(i / n);
-        const f = finder(x, y);
-        return f === 1 || (f === -1 && on) ? (
-          <rect key={i} x={x} y={y} width={1} height={1} />
-        ) : null;
-      })}
-    </svg>
-  );
-}
-
 /* ---------- BadgePreview ---------- */
 export function BadgePreview({
   name,
@@ -778,6 +730,7 @@ export function BadgePreview({
   type,
   purpose,
   badgeNo,
+  passCode,
 }: {
   name: string;
   host: string;
@@ -785,6 +738,7 @@ export function BadgePreview({
   type: string;
   purpose?: string;
   badgeNo: string;
+  passCode: string;
 }) {
   const date = new Date().toLocaleDateString("en-IN", {
     day: "numeric",
@@ -821,11 +775,21 @@ export function BadgePreview({
           <div className="mt-2 text-[12px] text-muted-foreground">{date}</div>
         </div>
         <div className="shrink-0 self-center">
-          <FakeQr seed={badgeNo} size={80} />
+          <QRCodeSVG
+            value={passCode}
+            size={80}
+            level="M"
+            includeMargin
+            aria-label="Visitor pass QR code"
+            data-testid="visitor-pass-qr"
+          />
         </div>
       </div>
       <div className="border-t border-dashed border-border px-5 py-2.5 text-left text-[12px] font-semibold text-muted-foreground">
         Badge {badgeNo}
+        <div className="mt-1 break-all font-mono text-[10px] font-normal" aria-label="Visitor pass code">
+          {passCode}
+        </div>
       </div>
     </div>
   );
