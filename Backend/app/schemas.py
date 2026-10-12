@@ -28,6 +28,15 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+class InitialSignupRequest(BaseModel):
+    setup_key: str = Field(min_length=1, max_length=256)
+    organization_name: str = Field(min_length=1, max_length=180)
+    site_name: str = Field(min_length=1, max_length=180)
+    full_name: str = Field(min_length=1, max_length=160)
+    email: EmailStr
+    password: str = Field(min_length=12, max_length=128)
+
+
 class HostOut(BaseModel):
     id: uuid.UUID
     employee_id: str

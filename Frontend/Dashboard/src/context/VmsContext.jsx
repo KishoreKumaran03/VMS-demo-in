@@ -143,6 +143,15 @@ export const VmsProvider = ({ children }) => {
     setAuthLoading(false);
     return user;
   };
+  const signup = async (setupData) => {
+    const response = await api('/auth/signup', { method: 'POST', body: JSON.stringify(setupData) });
+    window.localStorage.setItem('visitorhub_access_token', response.access_token);
+    setToken(response.access_token);
+    const user = { ...response.user, name: response.user.full_name };
+    setCurrentUser(user);
+    setAuthLoading(false);
+    return user;
+  };
   const logout = () => { clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); setHosts([]); setDataError(null); };
   const setCurrentRole = () => showToast('Roles are assigned to your account by an administrator.');
 
@@ -236,7 +245,7 @@ export const VmsProvider = ({ children }) => {
 
   return (
     <VmsContext.Provider value={{
-      currentUser, currentRole, setCurrentRole, login, logout, authLoading, passes, sites, hosts, auditLogs, notifications,
+      currentUser, currentRole, setCurrentRole, login, signup, logout, authLoading, passes, sites, hosts, auditLogs, notifications,
       summary, unreadNotificationCount: notifications.filter((n) => !n.read).length,
       markNotificationsAsRead, clearNotifications, toastMessage, showToast, addPassRequest, approvePass, rejectPass,
       checkInVisitor, checkOutVisitor, verifyVisitorPass, addSite, liveLobbyAlert, dismissLiveLobbyAlert, refreshData, dataError,
