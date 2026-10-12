@@ -1,744 +1,227 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const INITIAL_PASSES = [
-  {
-    id: 'VPASS-9941',
-    visitorName: 'David Miller',
-    email: 'david.miller@zenithventures.com',
-    phone: '+1 (555) 392-1084',
-    company: 'Zenith Ventures',
-    category: 'Customer',
-    hostName: 'Alex Morgan',
-    hostDepartment: 'Engineering Dept',
-    scheduledDate: 'Today',
-    scheduledTime: '2:30 PM',
-    slotDescription: 'Today, 2:30 PM - 5:00 PM',
-    zoneClearance: 'Executive Boardroom A',
-    status: 'Approved',
-    purpose: 'Quarterly Infrastructure & Cloud Architecture Review',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'VPASS-8812',
-    visitorName: 'Chloe Bennett',
-    email: 'c.bennett@designcraft.io',
-    phone: '+1 (555) 918-2431',
-    company: 'Design Team',
-    category: 'Interview',
-    hostName: 'Alex Morgan',
-    hostDepartment: 'Engineering Dept',
-    scheduledDate: 'Today',
-    scheduledTime: '10:00 AM',
-    slotDescription: 'Today • Checked In at 10:15 AM',
-    zoneClearance: 'Design Studio 4B',
-    status: 'Checked In',
-    purpose: 'Senior UX Candidate Onsite Portfolio Presentation',
-    checkInTime: '10:15 AM',
-    checkInGate: 'East Lobby',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'VPASS-7731',
-    visitorName: 'Robert Chen',
-    email: 'robert.chen@apexinstruments.com',
-    phone: '+1 (555) 438-9901',
-    company: 'Apex Instruments',
-    category: 'Vendor',
-    hostName: 'Alex Morgan',
-    hostDepartment: 'Engineering Dept',
-    scheduledDate: 'Tomorrow',
-    scheduledTime: '9:00 AM',
-    slotDescription: 'Tomorrow, 9:00 AM • Hardware Bay',
-    zoneClearance: 'Hardware Bay Level 1',
-    status: 'Pending Review',
-    purpose: 'Specialized Server Rack Sensor Calibrations',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'VPASS-6620',
-    visitorName: 'Samuel Brooks',
-    email: 'samuel@brookshvac.com',
-    phone: '+1 (555) 720-1923',
-    company: 'Brooks HVAC',
-    category: 'Contractor',
-    hostName: 'Alex Morgan',
-    hostDepartment: 'Engineering Dept',
-    scheduledDate: 'Today',
-    scheduledTime: '11:30 AM',
-    slotDescription: 'Today, 11:30 AM',
-    zoneClearance: 'Central Chiller Plant',
-    status: 'Rejected',
-    purpose: 'Refrigerant pressure gauge maintenance check',
-    rejectionReason: 'Missing safety credential upload',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'VPASS-1042',
-    visitorName: 'Sarah Jenkins',
-    email: 's.jenkins@partnercapital.com',
-    phone: '+1 (555) 883-2940',
-    company: 'Partner Capital',
-    category: 'VIP',
-    hostName: 'Engineering VP',
-    hostDepartment: 'Executive Team',
-    scheduledDate: 'Today',
-    scheduledTime: '2:00 PM',
-    slotDescription: 'Today, 2:00 PM',
-    zoneClearance: 'Executive Suite & Labs',
-    status: 'Pending Review',
-    purpose: 'Series B Strategic Partnership Briefing',
-  },
-  {
-    id: 'VPASS-1043',
-    visitorName: 'Mark Wood',
-    email: 'mark.wood@alumninetwork.edu',
-    phone: '+1 (555) 674-8891',
-    company: 'Fall Graduate Pool',
-    category: 'Interview',
-    hostName: 'HR Pool',
-    hostDepartment: 'People Operations',
-    scheduledDate: 'Today',
-    scheduledTime: '3:15 PM',
-    slotDescription: 'Slot 11-B • Group Clearance',
-    zoneClearance: 'Auditorium Wing',
-    status: 'Pending Review',
-    purpose: 'Graduate Hiring Drive Cohort 2 Assessment',
-  },
-  {
-    id: 'VPASS-1044',
-    visitorName: 'Dr. Elena Vance',
-    email: 'e.vance@techbio-partners.com',
-    phone: '+1 (555) 234-9102',
-    company: 'TechBio Labs',
-    category: 'Vendor',
-    hostName: 'David Sterling',
-    hostDepartment: 'R&D Operations',
-    scheduledDate: 'Today',
-    scheduledTime: '1:45 PM',
-    slotDescription: 'Hardware Delivery Escort',
-    zoneClearance: 'R&D Lab 4 Secure Cleanroom',
-    status: 'Pending Review',
-    purpose: 'Cryo-cooling sensor calibration and handover',
-  },
-  {
-    id: 'VPASS-8820',
-    visitorName: 'Elena Rostova',
-    email: 'elena.rostova@apexbio.com',
-    phone: '+1 (555) 678-2234',
-    company: 'Apex BioLabs',
-    category: 'Auditor',
-    hostName: 'Dr. Sarah Vance',
-    hostDepartment: 'Research Operations',
-    scheduledDate: 'Today',
-    scheduledTime: '8:15 AM',
-    slotDescription: 'Check-in 08:15 AM (Gate A)',
-    zoneClearance: 'Cleanroom B1',
-    status: 'Checked In',
-    purpose: 'Annual ISO Compliance Protocol Audit',
-    checkInTime: '08:15 AM',
-    checkInGate: 'Gate A',
-    overstayMinutes: 220,
-  },
-  {
-    id: 'VPASS-9102',
-    visitorName: 'Kenji Takahashi',
-    email: 'kenji@kurodapower.jp',
-    phone: '+1 (555) 887-1903',
-    company: 'Kuroda Power',
-    category: 'Contractor',
-    hostName: 'Mark Wilson',
-    hostDepartment: 'Facilities',
-    scheduledDate: 'Today',
-    scheduledTime: '10:30 AM',
-    slotDescription: 'Check-in 10:30 AM (North Dock)',
-    zoneClearance: 'Substation Gamma',
-    status: 'Checked In',
-    purpose: 'Uninterruptible power supply battery bank inspection',
-    checkInTime: '10:30 AM',
-    checkInGate: 'North Dock',
-    overstayMinutes: 75,
-  },
-  {
-    id: 'VPASS-9443',
-    visitorName: 'Priya Patel',
-    email: 'priya.patel@globalventures.com',
-    phone: '+1 (555) 432-8765',
-    company: 'Global Ventures',
-    category: 'Customer',
-    hostName: 'Ananya Sen',
-    hostDepartment: 'Product',
-    scheduledDate: 'Today',
-    scheduledTime: '11:25 AM',
-    slotDescription: 'Check-in 11:25 AM (Lobby Gate)',
-    zoneClearance: 'Conference Room 3',
-    status: 'Checked In',
-    purpose: 'Enterprise SaaS expansion contract sign-off',
-    checkInTime: '11:25 AM',
-    checkInGate: 'Lobby Gate',
-    overstayMinutes: 22,
-  },
-  {
-    id: 'VPASS-8821',
-    visitorName: 'Kavita Sharma',
-    email: 'kavita.s@partnertech.io',
-    company: 'Partner Tech',
-    category: 'Vendor',
-    hostName: 'Alex Mercer',
-    hostDepartment: 'Engineering',
-    scheduledDate: 'Today',
-    scheduledTime: '10:14 AM',
-    slotDescription: 'Gate 1 • 10:14 AM',
-    zoneClearance: 'Zone A - Floor 3',
-    status: 'Checked In',
-    purpose: 'API Gateway Integration Sync',
-    checkInTime: '10:14 AM',
-    checkInGate: 'Gate 1',
-  },
-  {
-    id: 'VPASS-8819',
-    visitorName: 'Arthur Pendleton',
-    email: 'arthur.p@facilities-corp.com',
-    company: 'Pendleton Security',
-    category: 'Contractor',
-    hostName: 'Marcus Cole',
-    hostDepartment: 'Facilities',
-    scheduledDate: 'Today',
-    scheduledTime: '1:30 PM',
-    slotDescription: 'ETA: 01:30 PM',
-    zoneClearance: 'Campus Perimeter',
-    status: 'Approved',
-    purpose: 'Turnstile mechanical maintenance audit',
-  },
-  {
-    id: 'VPASS-7704',
-    visitorName: 'Victor Kravitz',
-    email: 'victor.k@unknown.org',
-    company: 'Flagged Entity',
-    category: 'Vendor',
-    hostName: 'Unassigned',
-    hostDepartment: 'Site Security Lead',
-    scheduledDate: 'Today',
-    scheduledTime: '09:00 AM',
-    slotDescription: 'Deny Gate Access',
-    zoneClearance: 'None (Restricted)',
-    status: 'Restricted',
-    purpose: 'Unauthorized access attempt - flagged watchlist',
-    rejectionReason: 'Flagged on federal denied party & corporate watch list',
-  },
-];
-
-const INITIAL_SITES = [
-  {
-    id: 'site-1',
-    name: 'Tech Park Campus A',
-    location: 'San Jose, CA',
-    district: 'Innovation District',
-    status: 'High Load',
-    siteLead: 'Marcus Vance',
-    activeEntries: 218,
-    capacityMax: 240,
-    kiosksOnline: 8,
-    kiosksOffline: 0,
-    readersSyncPercent: 100,
-    utilizationPercent: 92,
-  },
-  {
-    id: 'site-2',
-    name: 'Downtown HQ Tower',
-    location: 'New York, NY',
-    district: 'Financial District',
-    status: 'Active',
-    siteLead: 'Elena Rostova',
-    activeEntries: 145,
-    capacityMax: 210,
-    kiosksOnline: 12,
-    kiosksOffline: 1,
-    readersSyncPercent: 98,
-    utilizationPercent: 68,
-  },
-  {
-    id: 'site-3',
-    name: 'Innovation R&D Hub',
-    location: 'Austin, TX',
-    district: 'Silicon Hills',
-    status: 'Active',
-    siteLead: 'Devon Brooks',
-    activeEntries: 78,
-    capacityMax: 175,
-    kiosksOnline: 4,
-    kiosksOffline: 0,
-    readersSyncPercent: 100,
-    utilizationPercent: 45,
-  },
-  {
-    id: 'site-4',
-    name: 'Metro Research Center',
-    location: 'Boston, MA',
-    district: 'Kendall Square',
-    status: 'Active',
-    siteLead: 'Sarah Vance',
-    activeEntries: 45,
-    capacityMax: 150,
-    kiosksOnline: 6,
-    kiosksOffline: 0,
-    readersSyncPercent: 100,
-    utilizationPercent: 30,
-  },
-];
-
-const INITIAL_AUDIT_LOGS = [
-  {
-    id: 'log-1',
-    timestamp: '14:28:12 UTC',
-    type: 'warning',
-    title: 'Badge Swipe Reject - Unassigned Level',
-    description: 'Visitor: Jordan K. • Server Room Fl. 4 • Tech Park A',
-  },
-  {
-    id: 'log-2',
-    timestamp: '14:19:04 UTC',
-    type: 'success',
-    title: 'Kiosk Fast-Pass Authorization',
-    description: 'Host: Sarah Lin • Downtown HQ Front Lobby',
-  },
-  {
-    id: 'log-3',
-    timestamp: '13:55:40 UTC',
-    type: 'policy',
-    title: 'NDA Auto-Signed & Stored',
-    description: 'Guest: Liam Nguyen • Innovation R&D Hub',
-  },
-  {
-    id: 'log-4',
-    timestamp: '13:42:18 UTC',
-    type: 'success',
-    title: 'Automated Check-out via BLE Sensor',
-    description: 'Visitor: Rachel Adams • Metro Research Center',
-  },
-];
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    timestamp: '10:15 AM',
-    title: 'Visitor Arrived at East Lobby',
-    message: 'Chloe Bennett checked in for UX Candidate interview.',
-    type: 'success',
-    read: false,
-    linkPath: '/host',
-  },
-  {
-    id: 'notif-2',
-    timestamp: '09:45 AM',
-    title: 'New Pass Clearance Request',
-    message: 'Sarah Jenkins VIP pass submitted by Engineering VP.',
-    type: 'action',
-    read: false,
-    linkPath: '/site-admin',
-  },
-  {
-    id: 'notif-3',
-    timestamp: '08:30 AM',
-    title: 'System Vault Snapshot Complete',
-    message: 'Daily encrypted backup snapshot synced across all 14 nodes.',
-    type: 'info',
-    read: true,
-    linkPath: '/super-admin',
-  },
-];
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { api, clearAccessToken, getAccessToken, signIn } from '../api.js';
 
 const VmsContext = createContext(null);
 
+function displayStatus(status) {
+  return ({ pending: 'Pending Review', scheduled: 'Approved', 'checked-in': 'Checked In', 'checked-out': 'Checked Out', cancelled: 'Cancelled', rejected: 'Rejected' })[status] || status;
+}
+
+function toPass(visit) {
+  const starts = new Date(visit.starts_at);
+  const ends = new Date(visit.ends_at);
+  return {
+    id: visit.id,
+    visitorName: visit.visitor_name,
+    email: visit.visitor_email || '',
+    phone: visit.visitor_phone || '',
+    company: visit.company || 'External Guest',
+    category: 'Customer',
+    hostName: visit.host_name,
+    hostDepartment: visit.host_department || '',
+    hostId: visit.host_id,
+    siteId: visit.site_id,
+    scheduledDate: starts.toLocaleDateString(),
+    scheduledTime: starts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    slotDescription: `${starts.toLocaleString()} – ${ends.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    status: displayStatus(visit.status),
+    source: visit.source,
+    purpose: visit.purpose,
+    passCode: visit.pass_code,
+    checkInTime: visit.checked_in_at ? new Date(visit.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    checkInGate: visit.check_in_gate || undefined,
+    checkOutTime: visit.checked_out_at ? new Date(visit.checked_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+  };
+}
+
+function makeDate(dateText, timeText) {
+  const today = new Date();
+  const date = /^\d{4}-\d\d-\d\d$/.test(dateText || '') ? dateText : today.toISOString().slice(0, 10);
+  const time = (timeText || '09:00').trim();
+  let hours = 9;
+  let minutes = 0;
+  const twelveHour = time.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  const twentyFourHour = time.match(/^(\d{1,2}):(\d{2})$/);
+  if (twelveHour) {
+    hours = Number(twelveHour[1]) % 12 + (twelveHour[3].toUpperCase() === 'PM' ? 12 : 0);
+    minutes = Number(twelveHour[2]);
+  } else if (twentyFourHour) {
+    hours = Number(twentyFourHour[1]);
+    minutes = Number(twentyFourHour[2]);
+  }
+  const result = new Date(`${date}T00:00:00`);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}
+
 export const VmsProvider = ({ children }) => {
-  const [currentRole, setCurrentRoleState] = useState(() => {
-    return localStorage.getItem('vms_current_role') || 'super-admin';
-  });
-
-  const [passes, setPasses] = useState(() => {
-    const saved = localStorage.getItem('vms_passes');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_PASSES;
-  });
-
-  const [sites, setSites] = useState(() => {
-    const saved = localStorage.getItem('vms_sites');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_SITES;
-  });
-
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const saved = localStorage.getItem('vms_audit_logs');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_AUDIT_LOGS;
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('vms_notifications');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_NOTIFICATIONS;
-  });
-
+  const [token, setToken] = useState(() => getAccessToken());
+  const [authLoading, setAuthLoading] = useState(() => Boolean(getAccessToken()));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [passes, setPasses] = useState([]);
+  const [sites, setSites] = useState([]);
+  const [hosts, setHosts] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [summary, setSummary] = useState({ expected_today: 0, visitors_today: 0, on_site: 0, checked_out_today: 0, pending: 0, user_count: 0, site_count: 0 });
   const [toastMessage, setToastMessage] = useState(null);
-  const [liveLobbyAlert, setLiveLobbyAlert] = useState({
-    visible: true,
-    visitorName: 'Chloe Bennett',
-    location: 'East Lobby Reception • Waiting in Lounge B',
-    time: '10:15 AM',
-  });
+  const [dismissedArrival, setDismissedArrival] = useState(null);
 
-  // Sync state to localStorage
-  useEffect(() => {
-    localStorage.setItem('vms_current_role', currentRole);
-  }, [currentRole]);
-
-  useEffect(() => {
-    localStorage.setItem('vms_passes', JSON.stringify(passes));
-  }, [passes]);
-
-  useEffect(() => {
-    localStorage.setItem('vms_sites', JSON.stringify(sites));
-  }, [sites]);
-
-  useEffect(() => {
-    localStorage.setItem('vms_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    localStorage.setItem('vms_audit_logs', JSON.stringify(auditLogs));
-  }, [auditLogs]);
-
-  const setCurrentRole = (role) => {
-    setCurrentRoleState(role);
+  const currentRole = currentUser?.role || null;
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage((current) => current === message ? null : current), 3500);
   };
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 3500);
-  };
-
-  const dismissLiveLobbyAlert = () => {
-    setLiveLobbyAlert(null);
-  };
-
-  const markNotificationsAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
-
-  // Workflow Action 1: Host creates a pass request
-  const addPassRequest = (passData) => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const newId = `VPASS-${randomNum}`;
-    const newPass = {
-      ...passData,
-      id: newId,
-      status: 'Pending Review',
-    };
-
-    setPasses((prev) => [newPass, ...prev]);
-
-    // Push notification to site admin
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      timestamp: 'Just now',
-      title: `Pass Request for ${newPass.visitorName}`,
-      message: `Requested by ${newPass.hostName} for ${newPass.scheduledDate} (${newId}).`,
-      type: 'action',
-      read: false,
-      linkPath: '/site-admin',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    // Add audit log
-    const nowStr = new Date().toTimeString().split(' ')[0] + ' UTC';
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: nowStr,
-        type: 'policy',
-        title: `Pass clearance requested: ${newId}`,
-        description: `Visitor: ${newPass.visitorName} • Host: ${newPass.hostName}`,
-      },
-      ...prev,
-    ]);
-
-    showToast(`Pass request submitted for ${newPass.visitorName} (#${newId})! Pending Site Admin approval.`);
-    return newPass;
-  };
-
-  // Workflow Action 2: Site Admin approves pass
-  const approvePass = (id) => {
-    setPasses((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          return { ...p, status: 'Approved' };
-        }
-        return p;
-      })
-    );
-
-    const approvedPass = passes.find((p) => p.id === id);
-    const vName = approvedPass ? approvedPass.visitorName : id;
-
-    // Push notification to host
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      timestamp: 'Just now',
-      title: `Pass Approved: ${vName}`,
-      message: `Site Admin approved badge #${id}. QR Pass is now ready to view & share.`,
-      type: 'success',
-      read: false,
-      linkPath: '/host',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    const nowStr = new Date().toTimeString().split(' ')[0] + ' UTC';
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: nowStr,
-        type: 'success',
-        title: `Pass clearance granted: #${id}`,
-        description: `Visitor ${vName} pre-cleared for campus entry`,
-      },
-      ...prev,
-    ]);
-
-    showToast(`Pass #${id} approved! Digital QR badge issued.`);
-  };
-
-  // Workflow Action 2b: Site Admin rejects pass
-  const rejectPass = (id, reason = 'Administrative review denied access') => {
-    setPasses((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          return { ...p, status: 'Rejected', rejectionReason: reason };
-        }
-        return p;
-      })
-    );
-
-    const rejectedPass = passes.find((p) => p.id === id);
-    const vName = rejectedPass ? rejectedPass.visitorName : id;
-
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      timestamp: 'Just now',
-      title: `Pass Rejected: ${vName}`,
-      message: `Pass #${id} was rejected: ${reason}`,
-      type: 'warning',
-      read: false,
-      linkPath: '/host',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    showToast(`Pass #${id} rejected.`);
-  };
-
-  // Workflow Action 3: Receptionist checks in visitor (verifies pass)
-  const checkInVisitor = (id, gate = 'Main Gate Lobby') => {
-    const target = passes.find((p) => p.id.toUpperCase() === id.toUpperCase());
-    if (!target) {
-      showToast(`Pass ID "${id}" not found in system.`);
-      return false;
+  const refreshData = async () => {
+    if (!getAccessToken()) return;
+    try {
+      const [visitRows, siteRows, hostRows, auditRows, notificationRows, summaryData] = await Promise.all([
+        api('/visits'), api('/sites'), api('/hosts'), api('/audit'), api('/notifications'), api('/dashboard/summary'),
+      ]);
+      setPasses(visitRows.map(toPass));
+      const activeBySite = visitRows.reduce((counts, visit) => {
+        if (visit.status === 'checked-in') counts[visit.site_id] = (counts[visit.site_id] || 0) + 1;
+        return counts;
+      }, {});
+      setSites(siteRows.map((site) => ({
+        ...site, location: site.address || '', district: '', status: site.is_active ? 'Active' : 'Inactive',
+        siteLead: '', activeEntries: activeBySite[site.id] || 0, capacityMax: null, kiosksOnline: null, kiosksOffline: null,
+        readersSyncPercent: null, utilizationPercent: null,
+      })));
+      setHosts(hostRows);
+      setAuditLogs(auditRows.map((row) => ({
+        id: row.id, timestamp: new Date(row.created_at).toLocaleString(), type: row.event_type.includes('revoked') ? 'warning' : 'success',
+        title: row.event_type, description: row.detail || '',
+      })));
+      setNotifications(notificationRows.map((row) => ({
+        id: row.id, timestamp: new Date(row.created_at).toLocaleString(), title: row.title, message: row.message,
+        type: 'success', read: row.read,
+      })));
+      setSummary(summaryData);
+    } catch (error) {
+      if (error.message.includes('sign-in required')) {
+        clearAccessToken(); setToken(null); setCurrentUser(null);
+      }
+      console.error('VisitorHub refresh failed:', error.message);
     }
+  };
 
-    if (target.status === 'Checked In') {
-      showToast(`${target.visitorName} is already checked in.`);
-      return true;
+  useEffect(() => {
+    let alive = true;
+    if (!token) { setCurrentUser(null); setAuthLoading(false); return undefined; }
+    setAuthLoading(true);
+    api('/auth/me').then((user) => { if (alive) setCurrentUser(user); }).catch(() => {
+      if (alive) { clearAccessToken(); setToken(null); setCurrentUser(null); }
+    }).finally(() => { if (alive) setAuthLoading(false); });
+    refreshData();
+    const poll = setInterval(refreshData, 10000);
+    const onFocus = () => refreshData();
+    window.addEventListener('focus', onFocus);
+    return () => { alive = false; clearInterval(poll); window.removeEventListener('focus', onFocus); };
+  }, [token]);
+
+  const login = async (email, password) => {
+    const user = await signIn(email, password);
+    setCurrentUser(user);
+    setToken(getAccessToken());
+    setAuthLoading(false);
+    return user;
+  };
+  const logout = () => { clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); };
+  const setCurrentRole = () => showToast('Roles are assigned to your account by an administrator.');
+
+  const addPassRequest = async (passData) => {
+    if (currentRole === 'receptionist' && (passData.phone || '').replace(/\D/g, '').length < 7) {
+      throw new Error('Enter a valid visitor phone number before registering a walk-in.');
     }
-
-    if (target.status === 'Restricted' || target.status === 'Rejected') {
-      showToast(`WARNING: Pass #${target.id} is ${target.status}! Gate entry denied.`);
-      return false;
-    }
-
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    setPasses((prev) =>
-      prev.map((p) => {
-        if (p.id.toUpperCase() === id.toUpperCase()) {
-          return {
-            ...p,
-            status: 'Checked In',
-            checkInTime: nowTime,
-            checkInGate: gate,
-          };
-        }
-        return p;
-      })
-    );
-
-    // Trigger Live Lobby Alert for host
-    setLiveLobbyAlert({
-      visible: true,
-      visitorName: target.visitorName,
-      location: `${gate} • Waiting in Lobby`,
-      time: nowTime,
+    const target = hosts.find((host) => host.name.toLowerCase() === (passData.hostName || '').toLowerCase())
+      || hosts.find((host) => host.email.toLowerCase() === currentUser?.email?.toLowerCase())
+      || hosts[0];
+    if (!target) throw new Error('No host is configured yet. Ask an administrator to add a host first.');
+    const starts = makeDate(passData.scheduledDate, passData.scheduledTime);
+    const payload = {
+      visitor_name: passData.visitorName, visitor_email: passData.email && !passData.email.endsWith('.guest.local') ? passData.email : null,
+      visitor_phone: passData.phone || null, company: passData.company || null, host_id: target.id, site_id: target.site_id,
+      purpose: passData.purpose, starts_at: starts.toISOString(), ends_at: new Date(starts.getTime() + 2 * 3600000).toISOString(),
+      consent_accepted: passData.consentAccepted === true, nda_accepted: passData.consentAccepted === true,
+    };
+    const result = currentRole === 'receptionist'
+      ? await api('/reception/walk-ins', { method: 'POST', body: JSON.stringify(payload) })
+      : await api('/visits', {
+      method: 'POST', body: JSON.stringify({
+        ...payload,
+      }),
     });
-
-    // Notify host
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      timestamp: nowTime,
-      title: `${target.visitorName} has arrived`,
-      message: `Checked in at ${gate}. Host notification sent.`,
-      type: 'success',
-      read: false,
-      linkPath: '/host',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    const nowStr = new Date().toTimeString().split(' ')[0] + ' UTC';
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: nowStr,
-        type: 'success',
-        title: `Kiosk Check-In: #${target.id}`,
-        description: `Visitor ${target.visitorName} checked in at ${gate}`,
-      },
-      ...prev,
-    ]);
-
-    showToast(`${target.visitorName} checked in successfully! NFC badge activated.`);
-    return true;
+    await refreshData();
+    return toPass(result);
   };
 
-  // Workflow Action 4: Receptionist checks out visitor
-  const checkOutVisitor = (id) => {
-    const target = passes.find((p) => p.id === id);
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    setPasses((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          return {
-            ...p,
-            status: 'Checked Out',
-            checkOutTime: nowTime,
-          };
-        }
-        return p;
-      })
-    );
-
-    const nowStr = new Date().toTimeString().split(' ')[0] + ' UTC';
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: nowStr,
-        type: 'success',
-        title: `Visitor checked out: #${id}`,
-        description: `${target ? target.visitorName : 'Guest'} departed facility`,
-      },
-      ...prev,
-    ]);
-
-    showToast(`${target ? target.visitorName : 'Visitor'} checked out successfully.`);
+  const approvePass = async (id) => {
+    try {
+      await api(`/visits/${id}/approve`, { method: 'POST' });
+      await refreshData();
+      showToast('Visit approved and pass issued.');
+    } catch (error) { showToast(error.message || 'Visit approval failed.'); }
   };
-
-  const addSite = (newSiteData) => {
-    const newSite = {
-      ...newSiteData,
-      id: `site-${Date.now()}`,
-      utilizationPercent: Math.round((newSiteData.activeEntries / newSiteData.capacityMax) * 100),
-    };
-    setSites((prev) => [...prev, newSite]);
-    showToast(`New facility campus "${newSite.name}" registered.`);
+  const rejectPass = async (id, reason = 'Administrative review denied access') => {
+    try {
+      await api(`/visits/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+      await refreshData();
+      showToast('Visit rejected.');
+    } catch (error) { showToast(error.message || 'Visit rejection failed.'); }
   };
-
-  const resetDemoData = () => {
-    setPasses(INITIAL_PASSES);
-    setSites(INITIAL_SITES);
-    setAuditLogs(INITIAL_AUDIT_LOGS);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    showToast('Demo data reset to factory preset.');
+  const checkInVisitor = async (id, gate = 'Main Gate Lobby') => {
+    const visit = passes.find((pass) => pass.id === id);
+    if (!visit?.passCode) throw new Error('This visit has no active pass.');
+    try {
+      await api(`/kiosk/pass/${encodeURIComponent(visit.passCode)}/check-in?gate=${encodeURIComponent(gate)}`, { method: 'POST' });
+      await refreshData();
+      showToast(`${visit.visitorName} checked in.`);
+      return true;
+    } catch (error) { showToast(error.message || 'Check-in failed.'); return false; }
   };
-
-  // Dynamic user profile based on role
-  const currentUser = {
-    name:
-      currentRole === 'super-admin'
-        ? 'Marcus Vance'
-        : currentRole === 'site-admin'
-        ? 'Elena Vance'
-        : currentRole === 'host'
-        ? 'Alex Morgan'
-        : 'Claire Davis',
-    email:
-      currentRole === 'super-admin'
-        ? 'super.admin@enterprise-vms.global'
-        : currentRole === 'site-admin'
-        ? 'building-a.lead@enterprise-vms.global'
-        : currentRole === 'host'
-        ? 'alex.morgan@enterprise-vms.global'
-        : 'claire.davis@enterprise-vms.global',
-    role: currentRole,
-    department:
-      currentRole === 'super-admin'
-        ? 'Global Infrastructure'
-        : currentRole === 'site-admin'
-        ? 'Campus Facilities & Security'
-        : currentRole === 'host'
-        ? 'Engineering Dept • Lead Architect'
-        : 'Front Desk & Gate Operations',
-    avatarUrl:
-      currentRole === 'host'
-        ? 'https://lh3.googleusercontent.com/aida-public/AB6AXuBmNqWNX-K4hCElBt1l4hSPESjdgWM3e6lkv1IWDOUMMgsJ-PrGCxdOFugjVQquALU6VsddoxKEugik37vpIbPq3PdzjgYRgNoI_vMFCQwB6aZhhpKpm56qCO-SrbiFenwtkFpG6wTb9OUVUm6wg17aFTimlcPGXsAKJoGeOMZjuLk9Gs3a7PB6YYtcOiYsxYLfi-ewF4JrgI9TuBPqePD0JHsCdVrvZwPXv8UsGAfySnFt0Vk_03Lq9w'
-        : 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUUlirDZ3eNAd4RsKv1qFht_LjdXcSFM57-HGRUbO8JEc_iTUcrL6rVuSiFwshojgy7AIiB9gZxkc9mNV3hU3L7p3E1FdgHHwlv878NvpVycssnC17y96j559_w9yJ836ZaximaMtGPmdiYy0WgZbdrX0pgZ0w-EHflkNDE5eHyVNL679lkEkmr17gG361kopWoWHvwIUT1wE1XT374DKj0B5R_PK8w1SNeYom6H1DkGq2uSgT4Y6DMQ',
+  const checkOutVisitor = async (id) => {
+    const visit = passes.find((pass) => pass.id === id);
+    if (!visit?.passCode) throw new Error('This visit has no active pass.');
+    try {
+      await api(`/kiosk/pass/${encodeURIComponent(visit.passCode)}/check-out`, { method: 'POST' });
+      await refreshData();
+      showToast(`${visit.visitorName} checked out.`);
+    } catch (error) { showToast(error.message || 'Check-out failed.'); }
   };
-
-  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
+  const addSite = async (siteData) => {
+    const result = await api('/sites', { method: 'POST', body: JSON.stringify({ name: siteData.name, address: siteData.location }) });
+    await refreshData();
+    showToast(`Site ${result.name} added.`);
+  };
+  const markNotificationsAsRead = async () => {
+    try {
+      const unread = notifications.filter((notification) => !notification.read);
+      await Promise.all(unread.map((notification) => api(`/notifications/${notification.id}/read`, { method: 'POST' })));
+      await refreshData();
+    } catch (error) { showToast(error.message || 'Notifications could not be updated.'); }
+  };
+  const clearNotifications = async () => markNotificationsAsRead();
+  const dismissLiveLobbyAlert = () => setDismissedArrival(liveLobbyAlert?.time || null);
+  const liveLobbyAlert = useMemo(() => {
+    const latest = passes.find((pass) => pass.status === 'Checked In');
+    if (!latest || latest.checkInTime === dismissedArrival) return null;
+    return { visible: true, visitorName: latest.visitorName, location: latest.checkInGate || 'Reception', time: latest.checkInTime };
+  }, [passes, dismissedArrival]);
 
   return (
-    <VmsContext.Provider
-      value={{
-        currentUser,
-        currentRole,
-        setCurrentRole,
-        passes,
-        sites,
-        auditLogs,
-        notifications,
-        unreadNotificationCount,
-        markNotificationsAsRead,
-        clearNotifications,
-        toastMessage,
-        showToast,
-        addPassRequest,
-        approvePass,
-        rejectPass,
-        checkInVisitor,
-        checkOutVisitor,
-        addSite,
-        liveLobbyAlert,
-        dismissLiveLobbyAlert,
-        resetDemoData,
-      }}
-    >
-      {children}
-    </VmsContext.Provider>
+    <VmsContext.Provider value={{
+      currentUser, currentRole, setCurrentRole, login, logout, authLoading, passes, sites, hosts, auditLogs, notifications,
+      summary, unreadNotificationCount: notifications.filter((n) => !n.read).length,
+      markNotificationsAsRead, clearNotifications, toastMessage, showToast, addPassRequest, approvePass, rejectPass,
+      checkInVisitor, checkOutVisitor, addSite, liveLobbyAlert, dismissLiveLobbyAlert, refreshData,
+    }}>{children}</VmsContext.Provider>
   );
 };
 
 export const useVms = () => {
   const context = useContext(VmsContext);
-  if (!context) {
-    throw new Error('useVms must be used within a VmsProvider');
-  }
+  if (!context) throw new Error('useVms must be used within a VmsProvider');
   return context;
 };

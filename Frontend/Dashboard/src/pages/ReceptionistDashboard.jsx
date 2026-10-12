@@ -4,10 +4,8 @@ import { useVms } from '../context/VmsContext';
 export const ReceptionistDashboard = () => {
   const { passes, checkInVisitor, checkOutVisitor, addPassRequest, showToast } = useVms();
 
-  const [inputPassId, setInputPassId] = useState('VPASS-9941');
-  const [verifiedPass, setVerifiedPass] = useState(() => {
-    return passes.find((p) => p.id === 'VPASS-9941') || passes[0] || null;
-  });
+  const [inputPassId, setInputPassId] = useState('');
+  const [verifiedPass, setVerifiedPass] = useState(null);
 
   // Modal dialog states
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -40,7 +38,7 @@ export const ReceptionistDashboard = () => {
       return;
     }
 
-    const found = passes.find((p) => p.id.toUpperCase() === idToSearch);
+    const found = passes.find((p) => p.id.toUpperCase() === idToSearch || p.passCode?.toUpperCase() === idToSearch);
     if (found) {
       setVerifiedPass(found);
       showToast(`Pass verified: #${found.id} (${found.visitorName})`);
@@ -49,15 +47,19 @@ export const ReceptionistDashboard = () => {
     }
   };
 
-  const handleSimulateScan = (idToScan = 'VPASS-9941') => {
+  const handleSimulateScan = (idToScan) => {
+    if (!idToScan) {
+      showToast('No active pass is available to select. Enter a visitor pass code.');
+      return;
+    }
     setShowScannerModal(false);
     setInputPassId(idToScan);
     handleVerifyPass(idToScan);
     showToast(`Optical barcode scanned: #${idToScan}`);
   };
 
-  const handleCompleteCheckIn = (passId) => {
-    const success = checkInVisitor(passId, 'Main Gate Lobby');
+  const handleCompleteCheckIn = async (passId) => {
+    const success = await checkInVisitor(passId, 'Main Gate Lobby');
     if (success) {
       // Refresh verified pass state
       const updated = passes.find((p) => p.id === passId);
@@ -68,13 +70,15 @@ export const ReceptionistDashboard = () => {
   };
 
   // Walk-in Wizard submit
-  const handleCompleteWalkIn = () => {
+  const handleCompleteWalkIn = async () => {
     if (!wName.trim()) {
       showToast('Please enter visitor name');
       return;
     }
 
-    const newPass = addPassRequest({
+    let newPass;
+    try {
+      newPass = await addPassRequest({
       visitorName: wName.trim(),
       email: `${wName.toLowerCase().replace(/\s+/g, '.')}@guest.local`,
       phone: wPhone.trim() || '+1 (555) 019-2834',
@@ -87,10 +91,15 @@ export const ReceptionistDashboard = () => {
       slotDescription: 'Immediate Walk-in Fast Pass',
       zoneClearance: 'Main Gate & Lobby Zone 1',
       purpose: wPurpose,
-    });
+      consentAccepted: wAcknowledge,
+      });
+    } catch (error) {
+      showToast(error.message || 'The walk-in could not be registered.');
+      return;
+    }
 
     // Directly check in the newly registered visitor
-    checkInVisitor(newPass.id, 'Front Desk Kiosk');
+    if (newPass.status !== 'Checked In') await checkInVisitor(newPass.id, 'Front Desk Kiosk');
     setShowWalkInModal(false);
     setWalkInStep(1);
 
@@ -532,25 +541,16 @@ export const ReceptionistDashboard = () => {
             </div>
 
             <div className="flex flex-col gap-2 pt-1">
-              <button
-                onClick={() => handleSimulateScan('VPASS-9941')}
-                className="w-full bg-primary hover:bg-primary-container text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-98 transition-all"
-              >
-                <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
-                <span>Simulate Scan: David Miller (#VPASS-9941)</span>
-              </button>
-              {passes.find((p) => p.status === 'Approved' && p.id !== 'VPASS-9941') && (
+              {passes.find((p) => p.status === 'Approved' && p.passCode) && (
                 <button
                   onClick={() => {
-                    const approved = passes.find(
-                      (p) => p.status === 'Approved' && p.id !== 'VPASS-9941'
-                    );
-                    if (approved) handleSimulateScan(approved.id);
+                    const approved = passes.find((p) => p.status === 'Approved' && p.passCode);
+                    if (approved) handleSimulateScan(approved.passCode);
                   }}
                   className="w-full bg-blue-50 hover:bg-blue-100 text-primary py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 border border-blue-100 transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">bolt</span>
-                  <span>Scan Most Recent Approved Pass</span>
+                  <span>Use Most Recent Approved Pass</span>
                 </button>
               )}
             </div>

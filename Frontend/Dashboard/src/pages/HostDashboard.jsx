@@ -7,6 +7,7 @@ export const HostDashboard = () => {
     currentUser,
     passes,
     addPassRequest,
+    approvePass,
     liveLobbyAlert,
     dismissLiveLobbyAlert,
     showToast,
@@ -43,14 +44,16 @@ export const HostDashboard = () => {
     return true;
   });
 
-  const handleInviteSubmit = (e) => {
+  const handleInviteSubmit = async (e) => {
     e.preventDefault();
     if (!vName.trim() || !vEmail.trim() || !vPurpose.trim()) {
       showToast('Please fill all required fields');
       return;
     }
 
-    const createdPass = addPassRequest({
+    let createdPass;
+    try {
+      createdPass = await addPassRequest({
       visitorName: vName.trim(),
       email: vEmail.trim(),
       phone: vPhone.trim() || '+1 (555) 019-2834',
@@ -63,7 +66,11 @@ export const HostDashboard = () => {
       slotDescription: `${vDate}, ${vTime}`,
       zoneClearance: 'Main Campus Floor 3',
       purpose: vPurpose.trim(),
-    });
+      });
+    } catch (error) {
+      showToast(error.message || 'The visit could not be submitted.');
+      return;
+    }
 
     // Reset form
     setVName('');
@@ -372,7 +379,13 @@ export const HostDashboard = () => {
                 </button>
               )}
 
-              {pass.status === 'Pending Review' && (
+              {pass.status === 'Pending Review' && pass.source === 'walk-in' && (
+                <button onClick={() => approvePass(pass.id)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                  Approve walk-in
+                </button>
+              )}
+
+              {pass.status === 'Pending Review' && pass.source !== 'walk-in' && (
                 <span className="text-[11px] text-slate-400 font-medium">
                   Awaiting Admin
                 </span>

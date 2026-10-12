@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { KioskProvider, useKiosk, type Screen, type Session } from "@/kiosk/store";
 import { CurrentScreen } from "@/kiosk/screens";
@@ -6,6 +6,21 @@ import { PointerProvider } from "@/kiosk/pointer";
 import { FAQS, FAQ_CATEGORIES } from "@/kiosk/faq-data";
 import { EMPLOYEES, PASSES } from "@/kiosk/data";
 import { useEffect } from "react";
+
+vi.mock("@/kiosk/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/kiosk/api")>();
+  const { EMPLOYEES: employeeFixtures } = await import("@/kiosk/data");
+  return {
+    ...actual,
+    searchKioskHosts: vi.fn(async () => employeeFixtures.map((host) => ({
+      id: host.id,
+      employee_id: host.employeeId || "",
+      name: host.name,
+      department: host.dept,
+      site_id: "test-site",
+    }))),
+  };
+});
 
 function KioskTestHarness({
   initialScreen,
@@ -147,7 +162,7 @@ describe("Kiosk Suite", () => {
     expect(continueBtns[0]).not.toBeDisabled();
   });
 
-  it("handles Walk-in Host search by employee ID only and displays exact match card", () => {
+  it("handles Walk-in Host search by employee ID only and displays exact match card", async () => {
     renderKiosk({
       initialScreen: "wi-host",
       sessionPatch: { purpose: "Meeting" },
@@ -169,9 +184,8 @@ describe("Kiosk Suite", () => {
     fireEvent.click(key1);
 
     // Exact match confirmation card appears
-    expect(screen.getByText("Employee found")).toBeInTheDocument();
+    expect(await screen.findByText("Employee found")).toBeInTheDocument();
     expect(screen.getByText("Arun Kumar")).toBeInTheDocument();
-    expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
     expect(screen.getByText("Engineering")).toBeInTheDocument();
 
     // Button to confirm
@@ -179,7 +193,7 @@ describe("Kiosk Suite", () => {
     expect(screen.getByRole("button", { name: /not them, search again/i })).toBeInTheDocument();
   });
 
-  it("shows calm error on invalid employee ID and pauses after 5 attempts", () => {
+  it("shows calm error on invalid employee ID and pauses after 5 attempts", async () => {
     renderKiosk({
       initialScreen: "wi-host",
       sessionPatch: { purpose: "Meeting" },
@@ -195,7 +209,7 @@ describe("Kiosk Suite", () => {
     fireEvent.click(key9);
 
     // Shows not found error with Need help
-    expect(screen.getByText(/We could not find that employee ID/i)).toBeInTheDocument();
+    expect(await screen.findByText(/We could not find that employee ID/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /need help\?/i })).toBeInTheDocument();
 
     // Perform 4 more failed attempts to reach 5
@@ -205,10 +219,11 @@ describe("Kiosk Suite", () => {
       fireEvent.click(key9);
       fireEvent.click(key9);
       fireEvent.click(key9);
+      if (i < 3) await screen.findByText(/We could not find that employee ID/i);
     }
 
     // After 5 failed attempts: 30-second security cooldown
-    expect(screen.getByText(/Lookups paused for security/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Lookups paused for security/i)).toBeInTheDocument();
     expect(screen.getByText(/Multiple attempts did not match/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ask reception/i })).toBeInTheDocument();
   });

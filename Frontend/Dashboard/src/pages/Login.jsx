@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVms } from '../context/VmsContext';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { setCurrentRole, showToast } = useVms();
+  const { login, showToast } = useVms();
 
   // Portal modes: 'super-admin' | 'admin' | 'host-desk'
   const [selectedPortal, setSelectedPortal] = useState('admin');
   const [deskSubRole, setDeskSubRole] = useState('host');
 
-  const [email, setEmail] = useState('building-a.lead@enterprise-vms.global');
-  const [password, setPassword] = useState('••••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [keepActive, setKeepActive] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,73 +19,30 @@ export const Login = () => {
   // Update credentials based on selected role
   const handlePortalChange = (portal) => {
     setSelectedPortal(portal);
-    if (portal === 'super-admin') {
-      setEmail('super.admin@enterprise-vms.global');
-    } else if (portal === 'admin') {
-      setEmail('building-a.lead@enterprise-vms.global');
-    } else {
-      if (deskSubRole === 'host') {
-        setEmail('alex.morgan@enterprise-vms.global');
-      } else {
-        setEmail('frontdesk.claire@enterprise-vms.global');
-      }
-    }
+    setEmail('');
   };
 
   const handleDeskSubRoleChange = (subRole) => {
     setDeskSubRole(subRole);
-    if (subRole === 'host') {
-      setEmail('alex.morgan@enterprise-vms.global');
-    } else {
-      setEmail('frontdesk.claire@enterprise-vms.global');
-    }
+    setEmail('');
   };
 
-  const handleAutofill = () => {
-    if (selectedPortal === 'super-admin') {
-      setEmail('super.admin@enterprise-vms.global');
-    } else if (selectedPortal === 'admin') {
-      setEmail('building-a.lead@enterprise-vms.global');
-    } else {
-      if (deskSubRole === 'host') {
-        setEmail('alex.morgan@enterprise-vms.global');
-      } else {
-        setEmail('frontdesk.claire@enterprise-vms.global');
-      }
-    }
-    setPassword('VMS-Enterprise-2026!');
-    showToast('Demo credentials autofilled');
-  };
+  const handleAutofill = () => showToast('Use the email and password assigned by your administrator.');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
-    let targetRole = 'site-admin';
-    let targetPath = '/site-admin';
-
-    if (selectedPortal === 'super-admin') {
-      targetRole = 'super-admin';
-      targetPath = '/super-admin';
-    } else if (selectedPortal === 'admin') {
-      targetRole = 'site-admin';
-      targetPath = '/site-admin';
-    } else {
-      if (deskSubRole === 'host') {
-        targetRole = 'host';
-        targetPath = '/host';
-      } else {
-        targetRole = 'receptionist';
-        targetPath = '/receptionist';
-      }
-    }
-
-    setTimeout(() => {
-      setIsLoading(false);
-      setCurrentRole(targetRole);
+    try {
+      const user = await login(email.trim(), password);
+      const targetPath = ({ 'super-admin': '/super-admin', 'site-admin': '/site-admin', host: '/host', receptionist: '/receptionist' })[user.role];
+      if (!targetPath) throw new Error('This account does not have a dashboard role.');
       navigate(targetPath);
-      showToast(`Authenticated successfully as ${targetRole.replace('-', ' ')}`);
-    }, 600);
+      showToast(`Signed in as ${user.full_name}.`);
+    } catch (error) {
+      showToast(error.message || 'Sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -107,7 +64,7 @@ export const Login = () => {
 
       {/* Main Title & Subtitle */}
       <h1 className="text-2xl font-bold text-slate-900 tracking-tight text-center">
-        VMS — Visitor Management
+        VMS â€” Visitor Management
       </h1>
       <p className="text-sm text-slate-500 mt-1 mb-6 text-center">
         Secure. Simplify. Welcome.
@@ -268,7 +225,7 @@ export const Login = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 className="w-full h-11 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
               <button
@@ -328,7 +285,7 @@ export const Login = () => {
       <div className="mt-6 flex flex-col items-center text-center max-w-sm px-4">
         <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <span className="material-symbols-outlined text-[15px] text-slate-400">lock</span>
-          <span>256-bit TLS Encrypted • SOC2 Type II Certified</span>
+          <span>256-bit TLS Encrypted â€¢ SOC2 Type II Certified</span>
         </div>
         <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
           All access attempts are logged for physical security audit requirements.
