@@ -8,14 +8,11 @@ export const SuperAdminDashboard = () => {
   const [siteSearch, setSiteSearch] = useState('');
   const [auditFilter, setAuditFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false);
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
 
   // New site form state
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteCity, setNewSiteCity] = useState('');
-  const [newSiteLead, setNewSiteLead] = useState('');
-  const [newSiteCapacity, setNewSiteCapacity] = useState('200');
 
   const handleRefreshMetrics = async () => {
     setIsRefreshing(true);
@@ -25,14 +22,6 @@ export const SuperAdminDashboard = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const handleTriggerBackup = () => {
-    setIsBackingUp(true);
-    setTimeout(() => {
-      setIsBackingUp(false);
-      showToast('Backup management is not available through the current API.');
-    }, 1200);
   };
 
   const handleCreateSite = async (e) => {
@@ -46,14 +35,6 @@ export const SuperAdminDashboard = () => {
       await addSite({
       name: newSiteName.trim(),
       location: newSiteCity.trim(),
-      district: 'Regional Headquarters',
-      status: 'Active',
-      siteLead: newSiteLead.trim() || 'Marcus Vance',
-      activeEntries: 12,
-      capacityMax: parseInt(newSiteCapacity, 10) || 200,
-      kiosksOnline: 4,
-      kiosksOffline: 0,
-      readersSyncPercent: 100,
       });
     } catch (error) {
       showToast(error.message || 'The site could not be created.');
@@ -62,15 +43,13 @@ export const SuperAdminDashboard = () => {
 
     setNewSiteName('');
     setNewSiteCity('');
-    setNewSiteLead('');
     setShowAddSiteModal(false);
   };
 
   const filteredSites = sites.filter(
     (s) =>
       s.name.toLowerCase().includes(siteSearch.toLowerCase()) ||
-      s.location.toLowerCase().includes(siteSearch.toLowerCase()) ||
-      s.siteLead.toLowerCase().includes(siteSearch.toLowerCase())
+      s.location.toLowerCase().includes(siteSearch.toLowerCase())
   );
 
   const filteredAuditLogs = auditLogs.filter((log) => {
@@ -96,7 +75,7 @@ export const SuperAdminDashboard = () => {
           </div>
           <div className="flex items-center gap-1.5 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
-            <span className="text-[11px] font-semibold text-primary">All Nodes Live</span>
+              <span className="text-[11px] font-semibold text-primary">Platform administration</span>
           </div>
         </div>
 
@@ -111,7 +90,7 @@ export const SuperAdminDashboard = () => {
                 All Organizations & Sites
               </p>
                 <p className="text-[11px] text-slate-500">
-                {sites.length} active sites in this organization
+                {sites.length} active sites across organizations
               </p>
             </div>
           </div>
@@ -293,37 +272,9 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
 
-          {/* Global Security Operations Center Banner */}
-          <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">Global Security Operations</h3>
-              <span className="text-xs font-semibold text-primary flex items-center gap-1 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                <span className="material-symbols-outlined text-[14px]">verified_user</span>
-                <span>Tier-4 SOC</span>
-              </span>
-            </div>
-
-            <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-900 shadow-inner">
-              <img
-                alt="Security Operations Center"
-                src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80"
-                className="w-full h-full object-cover opacity-60"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent flex items-end p-4">
-                <div className="flex items-center justify-between w-full text-white">
-                  <div>
-                    <p className="text-xs font-semibold tracking-wide">Central Clearance Gateway</p>
-                    <p className="text-[11px] text-slate-300">
-                      Hardware status is not connected to VisitorHub
-                    </p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/40">
-                    <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+            Physical gates, badge readers, and security hardware are not connected to VisitorHub.
+          </section>
         </div>
       )}
 
@@ -365,9 +316,7 @@ export const SuperAdminDashboard = () => {
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">{site.name}</h3>
-                      <p className="text-xs text-slate-500">
-                        {site.location} • {site.district}
-                      </p>
+                      <p className="text-xs text-slate-500">{site.location || 'No address recorded'}</p>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-primary border border-blue-100">
@@ -378,8 +327,8 @@ export const SuperAdminDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                   <div>
-                    <p className="text-[11px] text-slate-500">Site Facility Lead</p>
-                    <p className="font-semibold text-slate-900">{site.siteLead || 'Not assigned'}</p>
+                    <p className="text-[11px] text-slate-500">Visitors currently on site</p>
+                    <p className="font-semibold text-slate-900">{site.activeEntries}</p>
                   </div>
                   <div>
                     <p className="text-[11px] text-slate-500">Check-in Kiosks</p>
@@ -402,117 +351,11 @@ export const SuperAdminDashboard = () => {
 
       {activeTab === 'accounts' && <AccountManagementPanel scope="platform" />}
 
-      {/* TAB 3: POLICIES & SYSTEM HEALTH */}
       {activeTab === 'policies' && (
-        <div className="flex flex-col gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">Platform Compliance Rules</h3>
-              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-primary border border-blue-100">
-                Strict Enforcement
-              </span>
-            </div>
-
-            {/* Policy 1 */}
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="material-symbols-outlined text-[18px]">lock_clock</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">Data Retention Protocol</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Auto-purge guest telemetry after 90 days (GDPR & SOC-2 compliance)
-                  </p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-primary text-[20px] flex-shrink-0">
-                check_circle
-              </span>
-            </div>
-
-            {/* Policy 2 */}
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="material-symbols-outlined text-[18px]">draw</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">Digital NDA Pre-Signing</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Mandatory e-signature before badge printing across all 14 sites
-                  </p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-primary text-[20px] flex-shrink-0">
-                check_circle
-              </span>
-            </div>
-
-            {/* Policy 3 */}
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="material-symbols-outlined text-[18px]">person_pin_circle</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">Host Escort Requirement</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Unaccompanied access restricted for all non-employee tiers in Level 2+ zones
-                  </p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-primary text-[20px] flex-shrink-0">
-                check_circle
-              </span>
-            </div>
-          </div>
-
-          {/* Database Backup & Vault */}
-          <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Database Snapshot & Vault
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Geo-redundant encrypted state replication
-                </p>
-              </div>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1"></span>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex flex-col gap-1.5 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Last Snapshot:</span>
-                <span className="font-semibold text-slate-900">Today 03:00 AM UTC</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Vault Integrity:</span>
-                <span className="font-semibold text-primary">100% Cryptographic Match</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Snapshot Size:</span>
-                <span className="font-semibold text-slate-900">2.41 GB compressed</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleTriggerBackup}
-              disabled={isBackingUp}
-              className="w-full bg-primary hover:bg-primary-container text-white text-xs font-semibold py-3 rounded-xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all disabled:opacity-75"
-            >
-              <span
-                className={`material-symbols-outlined text-[18px] ${
-                  isBackingUp ? 'animate-bounce' : ''
-                }`}
-              >
-                cloud_upload
-              </span>
-              <span>{isBackingUp ? 'Creating Vault Snapshot...' : 'Trigger Immediate Snapshot'}</span>
-            </button>
-          </div>
-        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Platform policies</h2>
+          <p className="mt-1 text-sm text-slate-600">Policy configuration is not stored by the current VisitorHub API.</p>
+        </section>
       )}
 
       {/* TAB 4: SECURITY AUDIT LOGS */}
@@ -633,29 +476,6 @@ export const SuperAdminDashboard = () => {
                   placeholder="e.g. Seattle, WA"
                   className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-700">Site Facility Lead</label>
-                  <input
-                    type="text"
-                    value={newSiteLead}
-                    onChange={(e) => setNewSiteLead(e.target.value)}
-                    placeholder="e.g. Marcus Vance"
-                    className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-700">Max Capacity</label>
-                  <input
-                    type="number"
-                    value={newSiteCapacity}
-                    onChange={(e) => setNewSiteCapacity(e.target.value)}
-                    placeholder="200"
-                    className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
               </div>
 
               <div className="pt-2 flex gap-2">

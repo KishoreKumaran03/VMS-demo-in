@@ -97,9 +97,8 @@ export const VmsProvider = ({ children }) => {
         return counts;
       }, {});
       setSites(siteRows.map((site) => ({
-        ...site, location: site.address || '', district: '', status: site.is_active ? 'Active' : 'Inactive',
-        siteLead: '', activeEntries: activeBySite[site.id] || 0, capacityMax: null, kiosksOnline: null, kiosksOffline: null,
-        readersSyncPercent: null, utilizationPercent: null,
+        ...site, location: site.address || '', status: site.is_active ? 'Active' : 'Inactive',
+        activeEntries: activeBySite[site.id] || 0,
       })));
       setHosts(hostRows);
       setAuditLogs(auditRows.map((row) => ({

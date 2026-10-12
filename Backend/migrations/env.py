@@ -8,7 +8,8 @@ from app.database import Base
 from app import models  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# ConfigParser treats percent signs as interpolation markers; preserve URL-encoded passwords.
+config.set_main_option("sqlalchemy.url", get_settings().resolved_database_url.replace("%", "%%"))
 if config.config_file_name:
     fileConfig(config.config_file_name)
 target_metadata = Base.metadata

@@ -1,21 +1,24 @@
-# VisitorHub Staff Dashboard
+# VisitorHub staff Dashboard
 
-The dashboard uses the VisitorHub API for accounts, visits, approvals, and notifications.
+The React Dashboard authenticates with the FastAPI service and reads and writes visits, hosts, sites, accounts, notifications, and audit records in PostgreSQL.
 
-## Run locally
+## Run with Docker Compose
 
-Start PostgreSQL and the API using the [backend setup guide](../../Backend/README.md). Then, in this directory, run:
+Use the [Backend setup guide](../../Backend/README.md) to create `Backend/.env`, start PostgreSQL and the API, and provision the demo accounts. Open [http://localhost:3000](http://localhost:3000) and sign in with one of the provisioned accounts.
+
+## Run the Dashboard outside Docker
+
+Keep PostgreSQL and the API running in Docker, then run:
 
 ```sh
-npm install
+cd Frontend/Dashboard
+npm ci
 npm run dev -- --port 3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000). On a new database, use **First-time setup** with the one-time `INITIAL_SETUP_KEY` configured in `Backend/.env` to create the organization, first site, and Super Admin. After setup is complete, use **Sign in** with an account created by an administrator. The selected portal does not change a user's role.
+`VITE_API_URL` defaults to `http://localhost:8000/api/v1`. Set it in `.env.local` if your API uses another address. On sign-in, the Dashboard restores the API token, loads data for the signed-in role, and clears an invalid or expired session.
 
-Super Admins can add site admins, Super Admins, hosts, and receptionists from the **Accounts** tab. Site admins can add hosts and receptionists for their site from **Account management** on their dashboard. The backend verifies permissions for every account request.
-
-The API address defaults to `http://localhost:8000/api/v1`. To change it, set `VITE_API_URL` in `.env.local`.
+Super Admins create accounts from the **Accounts** tab. Site Admins create hosts and receptionists from **Account management**. Host creation goes through the API endpoint that writes both the login account and host-directory record.
 
 ## Checks
 
@@ -24,4 +27,4 @@ npm run lint
 npm run build
 ```
 
-Badge printing opens the browser print dialog. No physical printer is connected.
+The live browser end-to-end tests for the Dashboard and kiosk are documented in the [Backend setup guide](../../Backend/README.md).

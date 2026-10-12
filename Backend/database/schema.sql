@@ -25,7 +25,7 @@ CREATE INDEX ix_sites_organization_id ON sites (organization_id);
 
 CREATE TABLE users (
     id UUID PRIMARY KEY,
-    email VARCHAR(320) NOT NULL UNIQUE,
+    email VARCHAR(320) NOT NULL,
     full_name VARCHAR(160) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE visits (
     ends_at TIMESTAMPTZ NOT NULL,
     status visit_status NOT NULL,
     source VARCHAR(24) NOT NULL DEFAULT 'invited',
-    pass_digest VARCHAR(64) NOT NULL UNIQUE,
+    pass_digest VARCHAR(64) NOT NULL,
     pass_ciphertext TEXT NOT NULL,
     pass_expires_at TIMESTAMPTZ NOT NULL,
     pass_revoked_at TIMESTAMPTZ,

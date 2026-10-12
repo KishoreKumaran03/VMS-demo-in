@@ -1,35 +1,23 @@
-# VisitorHub Visitor Kiosk
+# VisitorHub kiosk
 
-The kiosk uses the same API and PostgreSQL data as the staff dashboard.
+The kiosk uses the shared FastAPI and PostgreSQL services. Pass lookup, host lookup, walk-in creation, approval status, check-in, and check-out are sent to the backend.
 
-## Run locally
+## Run with Docker Compose
 
-Start PostgreSQL and the API using the [backend setup guide](../Backend/README.md). In this directory, run:
+Follow [Backend setup](../Backend/README.md) to configure the environment, start all services, and create the demo accounts. The kiosk opens at [http://localhost:3001](http://localhost:3001). Its development site UUID is `00000000-0000-4000-8000-000000000001`.
 
-```sh
-npm install
-```
+## Run outside Docker
 
-Create `.env.local` with the API address and the ID of the kiosk's site:
-
-```env
-VITE_API_URL=http://localhost:8000/api/v1
-VITE_KIOSK_SITE_ID=<site-id>
-```
-
-Then start the kiosk:
+Start PostgreSQL and the API with Docker Compose, then run:
 
 ```sh
+cd Kiosk-FrontEnd
+npm ci
+cp .env.example .env.local
 npm run dev -- --host 0.0.0.0 --port 3001
 ```
 
-Open [http://localhost:3001](http://localhost:3001). Pass verification, check-in/out, and walk-in approval use the backend.
-
-## Notes
-
-- Phone OTP is simulated; no SMS is sent.
-- Badge printing is a preview; no physical printer is connected.
-- If QR scanning is unavailable in the browser, enter the pass code manually.
+Set `VITE_KIOSK_SITE_ID` to the active site UUID assigned to this kiosk. Vite reads it at startup/build time. `VITE_API_URL` defaults to `http://localhost:8000/api/v1`.
 
 ## Checks
 
@@ -39,21 +27,10 @@ npm run lint
 npm run build
 ```
 
-## Browser smoke tests
+The browser end-to-end suite exercises the live Dashboard, API, kiosk, and PostgreSQL database. Follow the test instructions in [Backend setup](../Backend/README.md); do not treat mocked component tests as end-to-end verification.
 
-Playwright exercises the dashboard and kiosk together. Use a dedicated test database because visits created by the tests remain in its history. Start the API and both frontends, then create a test site-admin and host using the backend setup guide.
+## Limitations
 
-Set the test URLs and account details, then run:
-
-```sh
-export VMS_E2E_API_URL=http://127.0.0.1:8000/api/v1
-export VMS_E2E_DASHBOARD_URL=http://127.0.0.1:3000
-export VMS_E2E_KIOSK_URL=http://127.0.0.1:3001
-export VMS_E2E_ADMIN_EMAIL='site-admin-test@example.com'
-export VMS_E2E_ADMIN_PASSWORD='<test-password>'
-export VMS_E2E_HOST_EMAIL='host-test@example.com'
-export VMS_E2E_HOST_PASSWORD='<test-password>'
-export VMS_E2E_HOST_EMPLOYEE_SUFFIX=1234
-npx playwright install chromium
-npm run test:e2e
-```
+- The phone OTP is simulated; no SMS provider is configured.
+- Badge printing is a preview. No physical printer, gate, or reader is connected.
+- `src/kiosk/data.ts` has sample objects for unit-rendering tests and the development-only demo panel. Normal pass, host, and walk-in workflows use API responses and do not fall back to those samples.
