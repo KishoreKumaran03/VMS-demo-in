@@ -187,9 +187,9 @@ export const AccountManagementPanel = ({ scope }) => {
         {loading ? <p className="py-4 text-sm text-slate-500">Loading accounts…</p> : users.length === 0 ? (
           <p className="py-4 text-sm text-slate-500">No accounts found.</p>
         ) : (
-          <table className="w-full min-w-[520px] text-left text-sm">
+          <table className="w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-slate-200 text-xs text-slate-500">
-              <tr><th className="py-2 pr-3 font-medium">Name</th><th className="py-2 pr-3 font-medium">Email</th><th className="py-2 pr-3 font-medium">Role</th><th className="py-2 font-medium">Site</th></tr>
+              <tr><th className="py-2 pr-3 font-medium">Name</th><th className="py-2 pr-3 font-medium">Email</th><th className="py-2 pr-3 font-medium">Role</th><th className="py-2 pr-3 font-medium">Employee ID</th><th className="py-2 font-medium">Site</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {users.map((user) => (
@@ -197,6 +197,7 @@ export const AccountManagementPanel = ({ scope }) => {
                   <td className="py-2 pr-3 font-medium text-slate-800">{user.full_name}</td>
                   <td className="py-2 pr-3 text-slate-600">{user.email}</td>
                   <td className="py-2 pr-3 capitalize text-slate-600">{user.role.replace('-', ' ')}</td>
+                  <td className="py-2 pr-3 text-slate-600">{user.role === 'host' ? user.employee_id || '—' : '—'}</td>
                   <td className="py-2 text-slate-600">{siteName(user.site_id)}</td>
                 </tr>
               ))}

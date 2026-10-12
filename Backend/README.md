@@ -33,7 +33,7 @@ Open:
 - API health: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 - API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-The API applies Alembic migrations on startup. PostgreSQL is the only application database. The development kiosk site UUID is `00000000-0000-4000-8000-000000000001`; Compose builds the kiosk with that value unless `VITE_KIOSK_SITE_ID` is set to another site.
+The API applies Alembic migrations on startup. PostgreSQL is the only application database. The development kiosk site UUID is `00000000-0000-4000-8000-000000000001`. The kiosk only searches Hosts assigned to its configured site. If your active site has a different ID, set `VITE_KIOSK_SITE_ID` in `Backend/.env` to that site's ID and rebuild the kiosk (`docker compose up -d --build kiosk` from `Backend`). Super Admins can get site IDs from the Dashboard or the authenticated `GET /api/v1/sites` endpoint. This setting is baked into the kiosk build.
 
 ## Create the three demo accounts
 
