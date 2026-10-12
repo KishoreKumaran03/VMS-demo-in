@@ -46,6 +46,20 @@ class HostCreate(BaseModel):
     site_id: uuid.UUID | None = None
 
 
+class HostAccountCreate(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=1, max_length=160)
+    password: str = Field(min_length=12, max_length=128)
+    employee_id: str = Field(min_length=1, max_length=80)
+    department: str = Field(min_length=1, max_length=120)
+    site_id: uuid.UUID | None = None
+
+
+class HostAccountOut(BaseModel):
+    user: UserOut
+    host: HostOut
+
+
 class HostPatch(BaseModel):
     employee_id: str | None = Field(default=None, min_length=1, max_length=80)
     name: str | None = Field(default=None, min_length=1, max_length=160)

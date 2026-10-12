@@ -13,6 +13,8 @@ npm run dev -- --port 3000
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with an account created in the backend. The selected portal does not change a user's role.
 
+Super Admins can add site admins from the **Accounts** tab. Site admins can add hosts and receptionists from **Account management** on their dashboard.
+
 The API address defaults to `http://localhost:8000/api/v1`. To change it, set `VITE_API_URL` in `.env.local`.
 
 ## Checks

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from .config import get_settings
 from .database import get_db
 from .models import AuditEvent, Host, Notification, Organization, Role, Site, User, Visit, VisitStatus, Visitor, utcnow
-from .schemas import AuditOut, HostCreate, HostOut, HostPatch, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
+from .schemas import AuditOut, HostAccountCreate, HostAccountOut, HostCreate, HostOut, HostPatch, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
 from .security import current_user, decrypt_pass, digest_pass, encrypt_pass, hash_password, issue_token, verify_password
 
 app = FastAPI(title="VisitorHub API", version="1.0.0", openapi_url="/api/v1/openapi.json")
@@ -261,6 +261,29 @@ def create_host(payload: HostCreate, db: Session = Depends(get_db), user: User =
     db.commit()
     db.refresh(host)
     return host
+
+
+@app.post("/api/v1/hosts/accounts", response_model=HostAccountOut, status_code=201)
+def create_host_account(payload: HostAccountCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if user.role not in {Role.site_admin, Role.super_admin}:
+        raise HTTPException(403, "Your role cannot create host accounts")
+    site_id = payload.site_id or user.site_id
+    site = db.get(Site, site_id) if site_id else None
+    if not site or not site.is_active or (user.role != Role.super_admin and (site.organization_id != user.organization_id or (user.site_id and site.id != user.site_id))):
+        raise HTTPException(404, "Site was not found in your organization")
+    email = str(payload.email).lower()
+    if db.scalar(select(User.id).where(User.email == email)):
+        raise HTTPException(409, "An account with this email already exists")
+    if db.scalar(select(Host.id).where(Host.organization_id == site.organization_id, Host.employee_id == payload.employee_id.strip())):
+        raise HTTPException(409, "A host with this employee ID already exists")
+
+    account = User(email=email, full_name=payload.full_name.strip(), password_hash=hash_password(payload.password), role=Role.host, organization_id=site.organization_id, site_id=site.id)
+    host = Host(organization_id=site.organization_id, site_id=site.id, employee_id=payload.employee_id.strip(), name=payload.full_name.strip(), email=email, department=payload.department.strip())
+    db.add_all([account, host])
+    db.commit()
+    db.refresh(account)
+    db.refresh(host)
+    return {"user": account, "host": host}
 
 
 @app.patch("/api/v1/hosts/{host_id}", response_model=HostOut)

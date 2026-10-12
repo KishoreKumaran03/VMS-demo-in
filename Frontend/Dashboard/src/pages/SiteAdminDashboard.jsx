@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 import { PassModal } from '../components/common/PassModal';
+import { AccountManagementPanel } from '../components/common/AccountManagementPanel';
 
 export const SiteAdminDashboard = () => {
   const { passes, hosts, sites, summary, approvePass, rejectPass, addPassRequest, showToast } = useVms();
@@ -105,6 +106,8 @@ export const SiteAdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      <AccountManagementPanel scope="site" />
 
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

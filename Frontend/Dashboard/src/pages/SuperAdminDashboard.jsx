@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
+import { AccountManagementPanel } from '../components/common/AccountManagementPanel';
 
 export const SuperAdminDashboard = () => {
   const { sites, auditLogs, addSite, showToast, summary, refreshData } = useVms();
@@ -142,6 +143,17 @@ export const SuperAdminDashboard = () => {
           >
             <span className="material-symbols-outlined text-[16px]">domain</span>
             <span>Sites ({sites.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('accounts')}
+            className={`flex-1 min-w-[90px] py-1.5 px-3 text-center rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'accounts'
+                ? 'bg-white text-primary shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
+            <span>Accounts</span>
           </button>
           <button
             onClick={() => setActiveTab('policies')}
@@ -387,6 +399,8 @@ export const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {activeTab === 'accounts' && <AccountManagementPanel scope="platform" />}
 
       {/* TAB 3: POLICIES & SYSTEM HEALTH */}
       {activeTab === 'policies' && (
