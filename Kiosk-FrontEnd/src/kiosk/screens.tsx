@@ -1213,7 +1213,7 @@ function OtpScreen({
         <div>
           <Heading
             title="Let us verify your phone"
-            sub={`We sent a 6-digit code to ${maskPhone(phone)}.`}
+            sub={`Demo phone verification for ${maskPhone(phone)}. No SMS is sent.`}
           />
           <OtpInput value={code} error={err} />
           <div className="mt-3 h-5 text-[13px]">
@@ -1244,7 +1244,7 @@ function OtpScreen({
               </button>
             )}
           </div>
-          <p className="mt-6 text-[12px] text-muted-foreground">Demo code: 123456</p>
+          <p className="mt-6 text-[12px] text-muted-foreground">Simulation only: no SMS is sent. Demo code: 123456.</p>
         </div>
         <Keypad
           onDigit={(d) => !err && setCode((c) => (c.length < 6 ? c + d : c))}
@@ -1899,7 +1899,7 @@ function Review() {
 
 /* ================= APPROVAL ================= */
 function Waiting() {
-  const { session, go, waitingSignal, signalWaiting, endSession } = useKiosk();
+  const { session, go, endSession } = useKiosk();
   const info = useVisitInfo();
   const walkin = session.flow === "walkin";
   const hostName = session.hostUnsure ? "reception" : info.hostShort;
@@ -1930,13 +1930,6 @@ function Waiting() {
     void poll();
     return () => { cancelled = true; clearTimeout(timer); };
   }, [walkin, session.visitRequestId, go, update]);
-  useEffect(() => {
-    if (!waitingSignal) return;
-    signalWaiting(null);
-    if (waitingSignal === "approve") go(walkin ? "approved" : "si-welcome");
-    else if (waitingSignal === "decline") go("declined");
-    else go("noresponse");
-  }, [waitingSignal, signalWaiting, go, walkin]);
   return (
     <Page>
       <FlowHeader />
@@ -1957,7 +1950,7 @@ function Waiting() {
                 Waiting for {hostName} to approve your visit.
               </h1>
               <p className="mt-2 text-[14px] text-muted-foreground">
-                Your host has been notified on their phone or computer. This usually takes less than
+                Your host has been notified in the VisitorHub dashboard. This usually takes less than
                 a minute.
               </p>
             </div>
@@ -2001,8 +1994,8 @@ function Waiting() {
           </div>
 
           <div className="flex justify-end gap-4">
-            <Btn variant="secondary" onClick={() => endSession("Your request was cancelled.")}>
-              Cancel request
+            <Btn variant="secondary" onClick={() => endSession("Leaving the kiosk. Your pending request remains with reception for review.")}>
+              Leave kiosk
             </Btn>
             <HelpBtn />
           </div>

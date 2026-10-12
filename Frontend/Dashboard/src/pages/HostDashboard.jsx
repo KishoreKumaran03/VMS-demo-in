@@ -6,6 +6,7 @@ export const HostDashboard = () => {
   const {
     currentUser,
     passes,
+    hosts,
     addPassRequest,
     approvePass,
     liveLobbyAlert,
@@ -27,10 +28,8 @@ export const HostDashboard = () => {
   const [vPurpose, setVPurpose] = useState('');
   const [vNotes, setVNotes] = useState('');
 
-  // Host passes (assigned to Alex Morgan or all for demo flexibility)
-  const hostPasses = passes.filter(
-    (p) => p.hostName === 'Alex Morgan' || p.hostName === currentUser.name || true
-  );
+  // The API scopes host accounts to visits assigned to their host directory entry.
+  const hostPasses = passes;
 
   const upcomingCount = hostPasses.filter((p) => p.status === 'Approved').length;
   const todayCount = hostPasses.filter((p) => p.status === 'Checked In').length;
@@ -56,7 +55,7 @@ export const HostDashboard = () => {
       createdPass = await addPassRequest({
       visitorName: vName.trim(),
       email: vEmail.trim(),
-      phone: vPhone.trim() || '+1 (555) 019-2834',
+      phone: vPhone.trim(),
       company: 'External Guest',
       category: vCategory,
       hostName: currentUser.name || 'Alex Morgan',
@@ -83,23 +82,7 @@ export const HostDashboard = () => {
     showToast(`Pass request submitted for ${createdPass.visitorName} (#${createdPass.id}). Awaiting Site Admin approval.`);
   };
 
-  const handleOpenMyBadge = () => {
-    // Show host badge
-    setSelectedPassForModal({
-      id: 'HOST-0092',
-      visitorName: 'Alex Morgan',
-      email: 'alex.morgan@enterprise-vms.global',
-      category: 'VIP',
-      hostName: 'Engineering VP',
-      hostDepartment: 'Architecture',
-      scheduledDate: 'Permanent',
-      scheduledTime: '24/7 Access',
-      slotDescription: 'All-Zone Executive Clearance',
-      zoneClearance: 'All Buildings • Level 4 Secure',
-      status: 'Approved',
-      purpose: 'Lead Architect Executive Staff Access',
-    });
-  };
+  const currentHost = hosts.find((host) => host.name === currentUser.name);
 
   return (
     <div className="flex flex-col w-full max-w-4xl mx-auto px-4 py-4 pb-28 gap-4">
@@ -126,18 +109,11 @@ export const HostDashboard = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 truncate">
-              Lead Architect • Engineering Dept
+              {currentHost?.department || 'Host'}
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handleOpenMyBadge}
-          className="w-10 h-10 rounded-full bg-blue-50 text-primary hover:bg-blue-100 flex items-center justify-center transition-colors flex-shrink-0"
-          title="My Host Badge"
-        >
-          <span className="material-symbols-outlined text-[20px]">qr_code_2</span>
-        </button>
       </div>
 
       {/* Real-Time Arrival Notification Alert (Dismissible) */}
@@ -540,7 +516,7 @@ export const HostDashboard = () => {
                   <span>Submit Invitation & Request Pass</span>
                 </button>
                 <p className="text-[11px] text-center text-slate-400">
-                  Instant SMS & email invites with dynamic QR pass link will be issued upon approval.
+                  The pass code and QR become available here after administrator approval. Email and SMS delivery are not configured.
                 </p>
               </div>
             </form>

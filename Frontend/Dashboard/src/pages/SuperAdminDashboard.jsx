@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 
 export const SuperAdminDashboard = () => {
-  const { sites, auditLogs, addSite, showToast, summary } = useVms();
+  const { sites, auditLogs, addSite, showToast, summary, refreshData } = useVms();
   const [activeTab, setActiveTab] = useState('overview');
   const [siteSearch, setSiteSearch] = useState('');
   const [auditFilter, setAuditFilter] = useState('all');
@@ -16,19 +16,21 @@ export const SuperAdminDashboard = () => {
   const [newSiteLead, setNewSiteLead] = useState('');
   const [newSiteCapacity, setNewSiteCapacity] = useState('200');
 
-  const handleRefreshMetrics = () => {
+  const handleRefreshMetrics = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      await refreshData();
+      showToast('Dashboard data refreshed from VisitorHub.');
+    } finally {
       setIsRefreshing(false);
-      showToast('Live campus occupancy metrics refreshed across 14 tenant nodes.');
-    }, 700);
+    }
   };
 
   const handleTriggerBackup = () => {
     setIsBackingUp(true);
     setTimeout(() => {
       setIsBackingUp(false);
-      showToast('Cryptographic backup snapshot #9421 created & verified in geo-redundant vault.');
+      showToast('Backup management is not available through the current API.');
     }, 1200);
   };
 
@@ -107,8 +109,8 @@ export const SuperAdminDashboard = () => {
               <p className="text-xs font-semibold text-slate-900 truncate">
                 All Organizations & Sites
               </p>
-              <p className="text-[11px] text-slate-500">
-                14 locations actively synchronizing
+                <p className="text-[11px] text-slate-500">
+                {sites.length} active sites in this organization
               </p>
             </div>
           </div>
@@ -300,7 +302,7 @@ export const SuperAdminDashboard = () => {
                   <div>
                     <p className="text-xs font-semibold tracking-wide">Central Clearance Gateway</p>
                     <p className="text-[11px] text-slate-300">
-                      99.99% Hardware Turnstile Uptime across 14 sites
+                      Hardware status is not connected to VisitorHub
                     </p>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/40">

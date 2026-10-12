@@ -3,6 +3,17 @@ import { api, clearAccessToken, getAccessToken, signIn } from '../api.js';
 
 const VmsContext = createContext(null);
 
+async function fetchAllVisits() {
+  const rows = [];
+  let offset = 0;
+  while (true) {
+    const page = await api(`/visits?offset=${offset}&limit=100`);
+    rows.push(...page);
+    if (page.length < 100) return rows;
+    offset += page.length;
+  }
+}
+
 function displayStatus(status) {
   return ({ pending: 'Pending Review', scheduled: 'Approved', 'checked-in': 'Checked In', 'checked-out': 'Checked Out', cancelled: 'Cancelled', rejected: 'Rejected' })[status] || status;
 }
@@ -57,6 +68,7 @@ function makeDate(dateText, timeText) {
 export const VmsProvider = ({ children }) => {
   const [token, setToken] = useState(() => getAccessToken());
   const [authLoading, setAuthLoading] = useState(() => Boolean(getAccessToken()));
+  const [dataError, setDataError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [passes, setPasses] = useState([]);
   const [sites, setSites] = useState([]);
@@ -77,7 +89,7 @@ export const VmsProvider = ({ children }) => {
     if (!getAccessToken()) return;
     try {
       const [visitRows, siteRows, hostRows, auditRows, notificationRows, summaryData] = await Promise.all([
-        api('/visits'), api('/sites'), api('/hosts'), api('/audit'), api('/notifications'), api('/dashboard/summary'),
+        fetchAllVisits(), api('/sites'), api('/hosts'), api('/audit'), api('/notifications'), api('/dashboard/summary'),
       ]);
       setPasses(visitRows.map(toPass));
       const activeBySite = visitRows.reduce((counts, visit) => {
@@ -99,11 +111,13 @@ export const VmsProvider = ({ children }) => {
         type: 'success', read: row.read,
       })));
       setSummary(summaryData);
+      setDataError(null);
     } catch (error) {
-      if (error.message.includes('sign-in required')) {
+      setDataError(error.message || 'Dashboard data could not be refreshed.');
+      if (error.message.toLowerCase().includes('sign-in required') || error.message.toLowerCase().includes('valid sign-in')) {
         clearAccessToken(); setToken(null); setCurrentUser(null);
       }
-      console.error('VisitorHub refresh failed:', error.message);
+      console.error('VisitorHub refresh failed:', error);
     }
   };
 
@@ -111,7 +125,7 @@ export const VmsProvider = ({ children }) => {
     let alive = true;
     if (!token) { setCurrentUser(null); setAuthLoading(false); return undefined; }
     setAuthLoading(true);
-    api('/auth/me').then((user) => { if (alive) setCurrentUser(user); }).catch(() => {
+    api('/auth/me').then((user) => { if (alive) setCurrentUser({ ...user, name: user.full_name }); }).catch(() => {
       if (alive) { clearAccessToken(); setToken(null); setCurrentUser(null); }
     }).finally(() => { if (alive) setAuthLoading(false); });
     refreshData();
@@ -122,21 +136,22 @@ export const VmsProvider = ({ children }) => {
   }, [token]);
 
   const login = async (email, password) => {
-    const user = await signIn(email, password);
+    const responseUser = await signIn(email, password);
+    const user = { ...responseUser, name: responseUser.full_name };
     setCurrentUser(user);
     setToken(getAccessToken());
     setAuthLoading(false);
     return user;
   };
-  const logout = () => { clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); };
+  const logout = () => { clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); setHosts([]); setDataError(null); };
   const setCurrentRole = () => showToast('Roles are assigned to your account by an administrator.');
 
   const addPassRequest = async (passData) => {
     if (currentRole === 'receptionist' && (passData.phone || '').replace(/\D/g, '').length < 7) {
       throw new Error('Enter a valid visitor phone number before registering a walk-in.');
     }
-    const target = hosts.find((host) => host.name.toLowerCase() === (passData.hostName || '').toLowerCase())
-      || hosts.find((host) => host.email.toLowerCase() === currentUser?.email?.toLowerCase())
+    const target = hosts.find((host) => host.name.toLowerCase() === currentUser?.name?.toLowerCase())
+      || hosts.find((host) => host.name.toLowerCase() === (passData.hostName || '').toLowerCase())
       || hosts[0];
     if (!target) throw new Error('No host is configured yet. Ask an administrator to add a host first.');
     const starts = makeDate(passData.scheduledDate, passData.scheduledTime);
@@ -144,8 +159,11 @@ export const VmsProvider = ({ children }) => {
       visitor_name: passData.visitorName, visitor_email: passData.email && !passData.email.endsWith('.guest.local') ? passData.email : null,
       visitor_phone: passData.phone || null, company: passData.company || null, host_id: target.id, site_id: target.site_id,
       purpose: passData.purpose, starts_at: starts.toISOString(), ends_at: new Date(starts.getTime() + 2 * 3600000).toISOString(),
-      consent_accepted: passData.consentAccepted === true, nda_accepted: passData.consentAccepted === true,
     };
+    if (currentRole === 'receptionist') {
+      payload.consent_accepted = passData.consentAccepted === true;
+      payload.nda_accepted = passData.ndaAccepted === true;
+    }
     const result = currentRole === 'receptionist'
       ? await api('/reception/walk-ins', { method: 'POST', body: JSON.stringify(payload) })
       : await api('/visits', {
@@ -162,14 +180,16 @@ export const VmsProvider = ({ children }) => {
       await api(`/visits/${id}/approve`, { method: 'POST' });
       await refreshData();
       showToast('Visit approved and pass issued.');
-    } catch (error) { showToast(error.message || 'Visit approval failed.'); }
+      return true;
+    } catch (error) { showToast(error.message || 'Visit approval failed.'); return false; }
   };
   const rejectPass = async (id, reason = 'Administrative review denied access') => {
     try {
       await api(`/visits/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
       await refreshData();
       showToast('Visit rejected.');
-    } catch (error) { showToast(error.message || 'Visit rejection failed.'); }
+      return true;
+    } catch (error) { showToast(error.message || 'Visit rejection failed.'); return false; }
   };
   const checkInVisitor = async (id, gate = 'Main Gate Lobby') => {
     const visit = passes.find((pass) => pass.id === id);
@@ -180,6 +200,10 @@ export const VmsProvider = ({ children }) => {
       showToast(`${visit.visitorName} checked in.`);
       return true;
     } catch (error) { showToast(error.message || 'Check-in failed.'); return false; }
+  };
+  const verifyVisitorPass = async (code) => {
+    const result = await api(`/kiosk/pass/${encodeURIComponent(code)}`);
+    return { ...toPass(result), passCode: code };
   };
   const checkOutVisitor = async (id) => {
     const visit = passes.find((pass) => pass.id === id);
@@ -215,7 +239,7 @@ export const VmsProvider = ({ children }) => {
       currentUser, currentRole, setCurrentRole, login, logout, authLoading, passes, sites, hosts, auditLogs, notifications,
       summary, unreadNotificationCount: notifications.filter((n) => !n.read).length,
       markNotificationsAsRead, clearNotifications, toastMessage, showToast, addPassRequest, approvePass, rejectPass,
-      checkInVisitor, checkOutVisitor, addSite, liveLobbyAlert, dismissLiveLobbyAlert, refreshData,
+      checkInVisitor, checkOutVisitor, verifyVisitorPass, addSite, liveLobbyAlert, dismissLiveLobbyAlert, refreshData, dataError,
     }}>{children}</VmsContext.Provider>
   );
 };

@@ -5,7 +5,7 @@ import { useVms } from '../../context/VmsContext';
 export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, currentRole, unreadNotificationCount, showToast } = useVms();
+  const { currentUser, currentRole, unreadNotificationCount, showToast, logout } = useVms();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const getRoleTitle = (role) => {
@@ -25,6 +25,7 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
 
   const handleLogout = () => {
     setShowProfileMenu(false);
+    logout();
     showToast('Secure session terminated. Logged out.');
     navigate('/login');
   };
@@ -58,17 +59,17 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
             </button>
           </div>
 
-          {/* Right Action Icons: Demo Flow Trigger, Notifications & User Avatar */}
+          {/* Right Action Icons: Workflow Guide, Notifications & User Avatar */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Demo Flow Trigger */}
             {onOpenWorkflow && (
               <button
                 onClick={onOpenWorkflow}
                 className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-primary text-xs font-semibold flex items-center gap-1.5 border border-blue-100 transition-colors shadow-xs"
-                title="Open Demo Workflow Guide & Switch User"
+                title="Open Role Workflow Guide"
               >
                 <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                <span className="hidden sm:inline">Demo Flow</span>
+                <span className="hidden sm:inline">Workflow Guide</span>
               </button>
             )}
 
@@ -130,7 +131,7 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
                         className="w-full px-4 py-2 text-left text-xs text-primary hover:bg-blue-50 flex items-center gap-2 font-medium transition-colors border-b border-slate-100"
                       >
                         <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                        <span>Switch User / Demo Guide</span>
+                        <span>Role Workflow Guide</span>
                       </button>
                     )}
                     <button

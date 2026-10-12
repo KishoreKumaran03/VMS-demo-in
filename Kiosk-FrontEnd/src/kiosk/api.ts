@@ -29,6 +29,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       const body = await response.json();
       if (typeof body.detail === "string") detail = body.detail;
+      else if (Array.isArray(body.detail)) {
+        detail = body.detail.map((issue: { msg?: string }) => issue.msg).filter(Boolean).join("; ") || detail;
+      }
     } catch { /* no response body */ }
     throw new Error(detail);
   }
@@ -58,10 +61,13 @@ export async function searchKioskHosts(query = "", department = "") {
 export function submitWalkIn(payload: {
   visitor_name: string;
   visitor_phone: string;
+  visitor_email?: string;
   company?: string;
   host_id: string;
   site_id: string;
   purpose: string;
+  consent_accepted: boolean;
+  nda_accepted: boolean;
 }) {
   return request<ApiVisit>("/kiosk/walk-ins", { method: "POST", body: JSON.stringify(payload) });
 }

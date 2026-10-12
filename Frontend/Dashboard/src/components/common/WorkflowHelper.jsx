@@ -23,12 +23,7 @@ export const WorkflowHelper = ({
   const {
     currentUser,
     currentRole,
-    setCurrentRole,
-    passes,
-    addPassRequest,
-    approvePass,
-    checkInVisitor,
-    checkOutVisitor,
+    logout,
     showToast,
   } = useVms();
   const navigate = useNavigate();
@@ -78,73 +73,15 @@ export const WorkflowHelper = ({
   ];
 
   const handleSwitchUser = (target) => {
-    setCurrentRole(target.role);
-    navigate(target.path);
+    if (!target) return;
     handleClose();
-    showToast(`Switched active persona to ${target.name} (${target.title})`);
-  };
-
-  // 1-Click step simulation helpers
-  const handleAutoStep1Create = () => {
-    const newPass = addPassRequest({
-      visitorName: 'Sophia Taylor',
-      email: 'sophia.taylor@novasystems.io',
-      phone: '+1 (555) 789-0123',
-      company: 'Nova Systems',
-      category: 'Customer',
-      hostName: 'Alex Morgan',
-      hostDepartment: 'Engineering Dept',
-      scheduledDate: 'Today',
-      scheduledTime: '3:00 PM',
-      slotDescription: 'Today, 3:00 PM - 5:00 PM',
-      zoneClearance: 'Main Boardroom 1',
-      purpose: 'Enterprise Cloud Architecture Migration Review',
-    });
-    setCurrentRole('site-admin');
-    navigate('/site-admin');
-    handleClose();
-    showToast(`Pass #${newPass.id} created for Sophia Taylor! Switched to Site Admin to approve.`);
-  };
-
-  const handleAutoStep2Approve = () => {
-    const pending = passes.find((p) => p.status === 'Pending Review');
-    if (pending) {
-      approvePass(pending.id);
-      setCurrentRole('host');
-      navigate('/host');
-      handleClose();
-      showToast(`Approved #${pending.id}! Switched to Host to view generated QR pass.`);
-    } else {
-      showToast('No pending pass requests found. Generating one first...');
-      handleAutoStep1Create();
+    if (currentRole === target.role) {
+      navigate(target.path);
+      return;
     }
-  };
-
-  const handleAutoStep3VerifyCheckin = () => {
-    const approved = passes.find((p) => p.status === 'Approved');
-    if (approved) {
-      setCurrentRole('receptionist');
-      navigate('/receptionist');
-      checkInVisitor(approved.id, 'Main Gate Lobby');
-      handleClose();
-      showToast(`Switched to Front Desk & checked in ${approved.visitorName} (#${approved.id})!`);
-    } else {
-      showToast('No approved pass ready for check-in. Approving pending pass first...');
-      handleAutoStep2Approve();
-    }
-  };
-
-  const handleAutoStep4Checkout = () => {
-    const checkedIn = passes.find((p) => p.status === 'Checked In');
-    if (checkedIn) {
-      setCurrentRole('receptionist');
-      navigate('/receptionist');
-      checkOutVisitor(checkedIn.id);
-      handleClose();
-      showToast(`Checked out ${checkedIn.visitorName} (#${checkedIn.id}). Active on-site badges decremented.`);
-    } else {
-      showToast('No checked-in visitor found to checkout.');
-    }
+    logout();
+    navigate('/login');
+    showToast(`Signed out. Sign in with a provisioned ${target.role} account to continue.`);
   };
 
   return (
@@ -154,12 +91,12 @@ export const WorkflowHelper = ({
         <button
           onClick={handleOpen}
           className="group flex items-center gap-2 bg-slate-900 hover:bg-primary text-white pl-3 pr-4 py-2.5 rounded-full shadow-2xl border border-white/20 active:scale-95 transition-all text-xs font-semibold"
-          title="Open Demo Workflow Guide & Switch User"
+          title="Open Role Workflow Guide"
         >
           <div className="w-5 h-5 rounded-full bg-primary group-hover:bg-white text-white group-hover:text-primary flex items-center justify-center transition-colors">
             <span className="material-symbols-outlined text-[14px]">alt_route</span>
           </div>
-          <span className="tracking-tight">Demo Workflow & Switch User</span>
+          <span className="tracking-tight">Role Workflow Guide</span>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         </button>
       </div>
@@ -183,7 +120,7 @@ export const WorkflowHelper = ({
                   </div>
                   <div>
                     <h2 className="text-sm font-semibold leading-tight">
-                      Demo Workflow & User Switcher
+                      Role Workflow Guide
                     </h2>
                     <p className="text-[11px] text-slate-300">
                       Simulate the complete visitor lifecycle
@@ -229,9 +166,9 @@ export const WorkflowHelper = ({
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      1. Switch User / Portal
+                      1. Open a role dashboard
                     </span>
-                    <span className="text-[11px] text-slate-400">Click to switch instantly</span>
+                    <span className="text-[11px] text-slate-400">Sign in to a provisioned account for each role</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -268,7 +205,7 @@ export const WorkflowHelper = ({
                                 isActive ? 'text-primary' : 'text-slate-400'
                               }`}
                             >
-                              {isActive ? 'Active Now ✓' : 'Switch Role &rarr;'}
+                              {isActive ? 'Active Now ✓' : 'Sign in as this role →'}
                             </span>
                             <span className="font-mono text-slate-400">{user.path}</span>
                           </div>
@@ -282,7 +219,7 @@ export const WorkflowHelper = ({
                 <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      2. Demonstration Workflow
+                      2. Workflow steps
                     </span>
                     <span className="text-[11px] text-slate-500">End-to-End Lifecycle</span>
                   </div>
@@ -313,11 +250,11 @@ export const WorkflowHelper = ({
                         Go to Host
                       </button>
                       <button
-                        onClick={handleAutoStep1Create}
+                        onClick={() => handleSwitchUser(demoUsers.find((u) => u.role === 'host'))}
                         className="px-2.5 py-1 bg-primary text-white rounded-lg text-[11px] font-semibold hover:bg-primary-container shadow-xs flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[13px]">bolt</span>
-                        <span>Auto-Request Pass</span>
+                        <span>Open Host Dashboard</span>
                       </button>
                     </div>
                   </div>
@@ -348,11 +285,11 @@ export const WorkflowHelper = ({
                         Go to Site Admin
                       </button>
                       <button
-                        onClick={handleAutoStep2Approve}
+                        onClick={() => handleSwitchUser(demoUsers.find((u) => u.role === 'site-admin'))}
                         className="px-2.5 py-1 bg-primary text-white rounded-lg text-[11px] font-semibold hover:bg-primary-container shadow-xs flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[13px]">check</span>
-                        <span>Approve Pass</span>
+                        <span>Open Admin Dashboard</span>
                       </button>
                     </div>
                   </div>
@@ -411,18 +348,18 @@ export const WorkflowHelper = ({
                         Go to Front Desk
                       </button>
                       <button
-                        onClick={handleAutoStep3VerifyCheckin}
+                        onClick={() => handleSwitchUser(demoUsers.find((u) => u.role === 'receptionist'))}
                         className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-semibold hover:bg-emerald-700 shadow-xs flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[13px]">how_to_reg</span>
-                        <span>Check In Guest</span>
+                        <span>Open Reception Dashboard</span>
                       </button>
                       <button
-                        onClick={handleAutoStep4Checkout}
+                        onClick={() => handleSwitchUser(demoUsers.find((u) => u.role === 'receptionist'))}
                         className="px-2.5 py-1 bg-slate-700 text-white rounded-lg text-[11px] font-semibold hover:bg-slate-800 shadow-xs flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[13px]">logout</span>
-                        <span>Check Out</span>
+                        <span>Open Reception Dashboard</span>
                       </button>
                     </div>
                   </div>

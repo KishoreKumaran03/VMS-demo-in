@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 
 export const ReceptionistDashboard = () => {
-  const { passes, checkInVisitor, checkOutVisitor, addPassRequest, showToast } = useVms();
+  const { passes, hosts, summary, checkInVisitor, checkOutVisitor, verifyVisitorPass, addPassRequest, showToast } = useVms();
 
   const [inputPassId, setInputPassId] = useState('');
   const [verifiedPass, setVerifiedPass] = useState(null);
@@ -16,8 +16,8 @@ export const ReceptionistDashboard = () => {
   const [wName, setWName] = useState('');
   const [wPhone, setWPhone] = useState('');
   const [wCompany, setWCompany] = useState('');
-  const [otpDigits, setOtpDigits] = useState(['7', '2', '9', '4']);
-  const [wHost, setWHost] = useState('David Sterling - Operations Lead');
+  const [otpDigits, setOtpDigits] = useState(['1', '2', '3', '4']);
+  const [wHost, setWHost] = useState('');
   const [wPurpose, setWPurpose] = useState('Client Meeting');
   const [wAcknowledge, setWAcknowledge] = useState(true);
 
@@ -29,21 +29,22 @@ export const ReceptionistDashboard = () => {
   const checkedInList = passes.filter((p) => p.status === 'Checked In');
   const checkedOutList = passes.filter((p) => p.status === 'Checked Out');
   const activeCount = checkedInList.length;
-  const expectedTotal = passes.length;
+  const expectedTotal = summary.visitors_today;
 
-  const handleVerifyPass = (queryId) => {
+  const handleVerifyPass = async (queryId) => {
     const idToSearch = (queryId || inputPassId).trim().toUpperCase();
     if (!idToSearch) {
       showToast('Please enter a Pass ID to verify');
       return;
     }
 
-    const found = passes.find((p) => p.id.toUpperCase() === idToSearch || p.passCode?.toUpperCase() === idToSearch);
-    if (found) {
+    try {
+      const found = await verifyVisitorPass(idToSearch);
       setVerifiedPass(found);
       showToast(`Pass verified: #${found.id} (${found.visitorName})`);
-    } else {
-      showToast(`No record found for Pass ID "${idToSearch}"`);
+    } catch (error) {
+      setVerifiedPass(null);
+      showToast(error.message || 'This pass is invalid, expired, or revoked.');
     }
   };
 
@@ -55,7 +56,6 @@ export const ReceptionistDashboard = () => {
     setShowScannerModal(false);
     setInputPassId(idToScan);
     handleVerifyPass(idToScan);
-    showToast(`Optical barcode scanned: #${idToScan}`);
   };
 
   const handleCompleteCheckIn = async (passId) => {
@@ -71,8 +71,8 @@ export const ReceptionistDashboard = () => {
 
   // Walk-in Wizard submit
   const handleCompleteWalkIn = async () => {
-    if (!wName.trim()) {
-      showToast('Please enter visitor name');
+    if (!wName.trim() || wPhone.replace(/\D/g, '').length < 7 || !wHost || !wAcknowledge) {
+      showToast('Enter the visitor name and phone, select a configured host, and confirm the terms.');
       return;
     }
 
@@ -80,11 +80,10 @@ export const ReceptionistDashboard = () => {
     try {
       newPass = await addPassRequest({
       visitorName: wName.trim(),
-      email: `${wName.toLowerCase().replace(/\s+/g, '.')}@guest.local`,
-      phone: wPhone.trim() || '+1 (555) 019-2834',
+      phone: wPhone.trim(),
       company: wCompany.trim() || 'Walk-in Guest',
       category: 'Customer',
-      hostName: wHost.split(' - ')[0],
+      hostName: hosts.find((host) => host.id === wHost)?.name,
       hostDepartment: 'Operations',
       scheduledDate: 'Today',
       scheduledTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -177,7 +176,7 @@ export const ReceptionistDashboard = () => {
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-2xl font-bold text-primary">{activeCount + 10}</span>
+            <span className="text-2xl font-bold text-primary">{summary.on_site}</span>
             <span className="text-[11px] text-primary font-medium">cleared</span>
           </div>
         </div>
@@ -205,7 +204,7 @@ export const ReceptionistDashboard = () => {
             </span>
           </div>
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-2xl font-bold text-slate-900">{checkedOutList.length + 10}</span>
+            <span className="text-2xl font-bold text-slate-900">{summary.checked_out_today}</span>
             <span className="text-[11px] text-slate-400 font-medium">departed</span>
           </div>
         </div>
@@ -332,7 +331,7 @@ export const ReceptionistDashboard = () => {
               )}
 
               <button
-                onClick={() => showToast(`Badge printing dispatched for #${verifiedPass.id}`)}
+                onClick={() => window.print()}
                 className="w-10 h-9 bg-white border border-slate-200 text-primary hover:bg-slate-50 rounded-lg flex items-center justify-center active:scale-98 transition-transform shadow-xs"
                 title="Print Badge"
               >
@@ -636,11 +635,11 @@ export const ReceptionistDashboard = () => {
               </div>
             )}
 
-            {/* Step 2: Simulated OTP */}
+            {/* Step 2: Simulated phone verification */}
             {walkInStep === 2 && (
               <div className="flex flex-col gap-2.5 mt-1 text-xs">
                 <span className="text-slate-500 leading-relaxed">
-                  An instant SMS security token was dispatched to {wPhone || '+1 (555) 019-2834'} to verify physical ownership of the device.
+                  Phone verification is simulated in this prototype; no SMS is sent or verified.
                 </span>
                 <div className="flex justify-between gap-2 my-2">
                   {otpDigits.map((digit, idx) => (
@@ -659,8 +658,8 @@ export const ReceptionistDashboard = () => {
                   ))}
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-mono text-primary">
-                  <span>Resend code in 42s</span>
-                  <span className="text-emerald-600 font-semibold">Phone Verified ✓</span>
+                  <span>Simulation only</span>
+                  <span className="text-emerald-600 font-semibold">Demo step</span>
                 </div>
               </div>
             )}
@@ -675,11 +674,8 @@ export const ReceptionistDashboard = () => {
                     onChange={(e) => setWHost(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2 rounded-xl outline-none focus:bg-white"
                   >
-                    <option>Alex Morgan - Lead Architect</option>
-                    <option>David Sterling - Operations Lead</option>
-                    <option>Sarah Vance - BioLabs Director</option>
-                    <option>Claire Davis - Reception & Facilities</option>
-                    <option>Michael Chang - Security Compliance</option>
+                    <option value="">Select a configured host</option>
+                    {hosts.map((host) => <option key={host.id} value={host.id}>{host.name} — {host.department}</option>)}
                   </select>
                 </div>
                 <div>

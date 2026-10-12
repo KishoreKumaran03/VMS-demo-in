@@ -42,6 +42,8 @@ def scope_visits(query, user: User):
         query = query.where(Visit.organization_id == user.organization_id)
         if user.role == Role.host:
             query = query.join(Host, Visit.host_id == Host.id).where(Host.email == user.email, Host.active.is_(True))
+            if user.site_id:
+                query = query.where(Visit.site_id == user.site_id)
         elif user.site_id:
             query = query.where(Visit.site_id == user.site_id)
     return query
@@ -431,7 +433,7 @@ def create_visit(payload: VisitCreate, db: Session = Depends(get_db), user: User
 def approve_visit(visit_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(current_user)):
     if user.role not in {Role.site_admin, Role.super_admin, Role.host}:
         raise HTTPException(403, "Your role cannot approve visits")
-    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id), user))
+    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id).with_for_update(of=Visit), user))
     if not visit:
         raise HTTPException(404, "Visit was not found")
     if user.role == Role.host and visit.host.email.lower() != user.email.lower():
@@ -454,7 +456,7 @@ def approve_visit(visit_id: uuid.UUID, db: Session = Depends(get_db), user: User
 def reject_visit(visit_id: uuid.UUID, payload: RejectVisit, db: Session = Depends(get_db), user: User = Depends(current_user)):
     if user.role not in {Role.site_admin, Role.super_admin}:
         raise HTTPException(403, "Only an administrator can reject visits")
-    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id), user))
+    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id).with_for_update(of=Visit), user))
     if not visit:
         raise HTTPException(404, "Visit was not found")
     if visit.status != VisitStatus.pending:
@@ -470,7 +472,7 @@ def reject_visit(visit_id: uuid.UUID, payload: RejectVisit, db: Session = Depend
 def revoke_pass(visit_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(current_user)):
     if user.role not in {Role.host, Role.site_admin, Role.super_admin}:
         raise HTTPException(403, "Your role cannot revoke passes")
-    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id), user))
+    visit = db.scalar(scope_visits(select(Visit).options(joinedload(Visit.visitor), joinedload(Visit.host)).where(Visit.id == visit_id).with_for_update(of=Visit), user))
     if not visit:
         raise HTTPException(404, "Visit was not found")
     if visit.status in {VisitStatus.checked_in, VisitStatus.checked_out, VisitStatus.cancelled}:
@@ -631,6 +633,8 @@ def list_audit(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=20
         query = query.where(AuditEvent.organization_id == user.organization_id)
     if user.role == Role.host:
         query = query.join(Visit, AuditEvent.visit_id == Visit.id).join(Host, Visit.host_id == Host.id).where(Host.email == user.email)
+        if user.site_id:
+            query = query.where(Visit.site_id == user.site_id)
     elif user.site_id and user.role != Role.super_admin:
         query = query.join(Visit, AuditEvent.visit_id == Visit.id).where(Visit.site_id == user.site_id)
     return db.scalars(query.order_by(AuditEvent.created_at.desc()).offset(offset).limit(limit)).all()

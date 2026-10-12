@@ -8,10 +8,14 @@ export const PassModal = ({ pass, onClose }) => {
   if (!pass) return null;
 
   const handleShare = () => {
-    const text = pass.passCode || pass.id;
+    if (!pass.passCode) {
+      showToast('The pass code will be available after approval.');
+      return;
+    }
+    const text = pass.passCode;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
-      showToast(`Pass link for #${pass.id} copied to clipboard!`);
+      showToast(`Pass code for #${pass.id} copied to clipboard.`);
     } else {
       showToast(`Pass #${pass.id} ready.`);
     }
@@ -54,7 +58,7 @@ export const PassModal = ({ pass, onClose }) => {
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col items-center justify-center gap-3">
           {/* SVG Crisp QR Graphic */}
           <div className="w-44 h-44 bg-white rounded-xl p-3 shadow-inner flex items-center justify-center border border-slate-100">
-            <QRCodeSVG value={pass.passCode || pass.id} size={152} level="M" includeMargin
+            {pass.passCode ? <QRCodeSVG value={pass.passCode} size={152} level="M" includeMargin
               className="w-full h-full text-slate-900"
               fill="currentColor"
               viewBox="0 0 100 100"
@@ -84,12 +88,17 @@ export const PassModal = ({ pass, onClose }) => {
               <rect height="6" width="6" x="76" y="65" />
               <rect height="10" width="10" x="85" y="78" />
               <rect height="6" width="8" x="72" y="88" />
-            </QRCodeSVG>
+            </QRCodeSVG> : <div className="px-4 text-center text-xs font-medium text-slate-500">A visitor pass code will appear here after approval.</div>}
           </div>
           <div className="flex items-center gap-1.5 text-primary text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            <span>Fast NFC & Optical Scanner Active</span>
+            <span>QR encodes the active visitor pass</span>
           </div>
+          {pass.passCode && (
+            <code data-testid="pass-code" className="max-w-full break-all text-center font-mono text-[10px] text-slate-500">
+              {pass.passCode}
+            </code>
+          )}
         </div>
 
         {/* Visitor Details Block */}

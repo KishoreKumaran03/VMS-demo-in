@@ -833,7 +833,7 @@ export function BadgePreview({
 
 /* ---------- DemoPanel ---------- */
 export function DemoPanel() {
-  const { screen, go, printerFail, setPrinterFail, signalWaiting } = useKiosk();
+  const { screen, go, printerFail, setPrinterFail } = useKiosk();
   const [open, setOpen] = useState(false);
   const item =
     "pressable w-full rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold hover:bg-primary-soft";
@@ -844,20 +844,6 @@ export function DemoPanel() {
           <div className="px-3 py-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
             Demo controls
           </div>
-          {screen === "waiting" && (
-            <>
-              <button className={item} onClick={() => signalWaiting("approve")}>
-                Host approves
-              </button>
-              <button className={item} onClick={() => signalWaiting("decline")}>
-                Host declines
-              </button>
-              <button className={item} onClick={() => signalWaiting("timeout")}>
-                No response
-              </button>
-              <div className="my-1 h-px bg-border" />
-            </>
-          )}
           <button className={item} onClick={() => setPrinterFail(!printerFail)}>
             Printer failure: {printerFail ? "On" : "Off"}
           </button>

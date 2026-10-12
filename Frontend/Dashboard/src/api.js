@@ -18,7 +18,11 @@ export async function api(path, options = {}) {
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
-      message = typeof body.detail === 'string' ? body.detail : message;
+      message = typeof body.detail === 'string'
+        ? body.detail
+        : Array.isArray(body.detail)
+          ? body.detail.map((issue) => issue.msg).filter(Boolean).join('; ') || message
+          : message;
     } catch { /* response did not contain JSON */ }
     if (response.status === 401) clearAccessToken();
     throw new Error(message);

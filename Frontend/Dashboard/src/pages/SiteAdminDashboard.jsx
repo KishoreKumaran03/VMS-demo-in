@@ -3,7 +3,7 @@ import { useVms } from '../context/VmsContext';
 import { PassModal } from '../components/common/PassModal';
 
 export const SiteAdminDashboard = () => {
-  const { passes, approvePass, rejectPass, addPassRequest, showToast } = useVms();
+  const { passes, hosts, sites, summary, approvePass, rejectPass, addPassRequest, showToast } = useVms();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPassForModal, setSelectedPassForModal] = useState(null);
   const [showNewPassModal, setShowNewPassModal] = useState(false);
@@ -13,17 +13,17 @@ export const SiteAdminDashboard = () => {
   const [newVisitorName, setNewVisitorName] = useState('');
   const [newVisitorEmail, setNewVisitorEmail] = useState('');
   const [newVisitorCompany, setNewVisitorCompany] = useState('');
-  const [newVisitorHost, setNewVisitorHost] = useState('Alex Morgan');
+  const [newVisitorHost, setNewVisitorHost] = useState('');
   const [newVisitorZone, setNewVisitorZone] = useState('Zone A - Engineering Floor 3');
 
   const pendingPasses = passes.filter((p) => p.status === 'Pending Review');
-  const activeOnSiteCount = passes.filter((p) => p.status === 'Checked In').length;
+  const activeOnSiteCount = summary.on_site;
 
   const handlePingAll = () => {
     setIsPinging(true);
     setTimeout(() => {
       setIsPinging(false);
-      showToast('All 4 physical turnstiles & optical barriers responded (avg latency: 14ms).');
+      showToast('No hardware connectivity integration is configured for this site.');
     }, 600);
   };
 
@@ -81,14 +81,14 @@ export const SiteAdminDashboard = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-slate-900 leading-tight">
-                  North Tech Campus
+                  {sites[0]?.name || 'Configured Site'}
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-primary border border-blue-100">
                   Active Hub
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Facility Code: Site #04 • Zone A & B
+                Visitor management for the configured site
               </p>
             </div>
           </div>
@@ -101,7 +101,7 @@ export const SiteAdminDashboard = () => {
           </div>
           <div className="flex items-center gap-1.5 text-slate-500">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            <span>4 Gates Synchronized</span>
+            <span>Hardware status unavailable</span>
           </div>
         </div>
       </div>
@@ -116,10 +116,9 @@ export const SiteAdminDashboard = () => {
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-slate-900">142</span>
-              <span className="text-[11px] font-semibold text-primary">+12%</span>
+              <span className="text-2xl font-bold text-slate-900">{summary.visitors_today}</span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Logged check-ins</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Visitors scheduled or processed today</p>
           </div>
         </div>
 
@@ -131,10 +130,10 @@ export const SiteAdminDashboard = () => {
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-slate-900">{activeOnSiteCount + 30}</span>
+              <span className="text-2xl font-bold text-slate-900">{activeOnSiteCount}</span>
               <span className="w-2 h-2 rounded-full bg-primary"></span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Active NFC badges</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Checked-in visits</p>
           </div>
         </div>
 
@@ -207,8 +206,8 @@ export const SiteAdminDashboard = () => {
             <div className="bg-primary h-full rounded-full" style={{ width: '71%' }}></div>
           </div>
           <div className="flex justify-between items-center text-[11px] text-slate-400 mt-0.5">
-            <span>Current Queue: 14 at East Turnstile</span>
-            <span>Avg Clear: 32s</span>
+            <span>Pending requests: {summary.pending}</span>
+            <span>Hardware timing unavailable</span>
           </div>
         </div>
       </div>
@@ -223,9 +222,10 @@ export const SiteAdminDashboard = () => {
             </span>
           </div>
           <button
-            onClick={() => {
-              pendingPasses.forEach((p) => approvePass(p.id));
-              showToast(`Approved all ${pendingPasses.length} pending pass requests!`);
+            onClick={async () => {
+              const results = await Promise.all(pendingPasses.map((p) => approvePass(p.id)));
+              const approvedCount = results.filter(Boolean).length;
+              showToast(`${approvedCount} of ${results.length} pass requests approved.`);
             }}
             disabled={pendingPasses.length === 0}
             className="text-primary hover:underline text-xs font-semibold disabled:opacity-40"
@@ -431,7 +431,7 @@ export const SiteAdminDashboard = () => {
                   )}
                   {pass.status === 'Checked In' && (
                     <button
-                      onClick={() => showToast(`Printing physical badge for ${pass.visitorName}`)}
+                      onClick={() => window.print()}
                       className="text-primary hover:underline font-semibold flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[14px]">print</span>
@@ -513,10 +513,8 @@ export const SiteAdminDashboard = () => {
                   onChange={(e) => setNewVisitorHost(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:outline-none"
                 >
-                  <option value="Alex Morgan">Alex Morgan (Lead Architect)</option>
-                  <option value="Marcus Vance">Marcus Vance (Site Facility Lead)</option>
-                  <option value="Elena Rostova">Elena Rostova (BioLabs Director)</option>
-                  <option value="David Sterling">David Sterling (Operations Lead)</option>
+                  <option value="">Select a configured host</option>
+                  {hosts.map((host) => <option key={host.id} value={host.name}>{host.name} ({host.department})</option>)}
                 </select>
               </div>
 

@@ -17,22 +17,32 @@ import { WorkflowHelper } from './components/common/WorkflowHelper.jsx';
 
 const AppLayout = ({ children }) => {
   const location = useLocation();
-  const { toastMessage } = useVms();
+  const { toastMessage, dataError } = useVms();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
 
   const isLoginPage = location.pathname === '/login';
 
+  const { currentUser, authLoading } = useVms();
+  const showHeader = !isLoginPage && !authLoading && !!currentUser;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
-      {!isLoginPage && (
-        <Header
-          onOpenNotifications={() => setIsNotifOpen(true)}
-          onOpenWorkflow={() => setIsWorkflowOpen(true)}
-        />
-      )}
+        {showHeader && (
+          <Header
+            onOpenNotifications={() => setIsNotifOpen(true)}
+            onOpenWorkflow={() => setIsWorkflowOpen(true)}
+          />
+        )}
 
       <main className={`flex-1 flex flex-col w-full ${!isLoginPage ? 'pt-14' : ''}`}>
+        {dataError && currentUser && (
+          <div role="alert" className="mx-auto mt-3 w-full max-w-4xl px-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Dashboard data could not be refreshed: {dataError}
+            </div>
+          </div>
+        )}
         {children}
       </main>
 

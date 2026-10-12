@@ -1,20 +1,25 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# VisitorHub Staff Dashboard
 
-# Run and deploy your AI Studio app
+The dashboard uses the VisitorHub API for accounts, visits, approvals, and notifications.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/b461dd99-cafe-4fc5-8c93-a715fbaab4c1
+Start PostgreSQL and the API using the [backend setup guide](../../Backend/README.md). Then, in this directory, run:
 
-## Run Locally
+```sh
+npm install
+npm run dev -- --port 3000
+```
 
-**Prerequisites:**  Node.js
+Open [http://localhost:3000](http://localhost:3000) and sign in with an account created in the backend. The selected portal does not change a user's role.
 
+The API address defaults to `http://localhost:8000/api/v1`. To change it, set `VITE_API_URL` in `.env.local`.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Checks
+
+```sh
+npm run lint
+npm run build
+```
+
+Badge printing opens the browser print dialog. No physical printer is connected.
