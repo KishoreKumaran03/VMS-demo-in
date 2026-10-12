@@ -2,6 +2,7 @@
 import argparse
 import getpass
 import sys
+import uuid
 
 from sqlalchemy import select
 
@@ -14,30 +15,54 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--organization", required=True)
     parser.add_argument("--site", required=True)
+    parser.add_argument("--site-id", type=uuid.UUID, help="Optional stable site UUID for a configured kiosk")
     parser.add_argument("--email", required=True)
     parser.add_argument("--name", required=True)
     args = parser.parse_args()
     email = args.email.strip().lower()
-    password = getpass.getpass("New administrator password (12+ characters): ")
-    confirmation = getpass.getpass("Confirm password: ")
-    if len(password) < 12 or password != confirmation:
-        print("Password must contain at least 12 characters and both entries must match.", file=sys.stderr)
+
+    organization_name = args.organization.strip()
+    site_name = args.site.strip()
+    full_name = args.name.strip()
+    if not organization_name or not site_name or not full_name:
+        print("Organization, site, and name must not be blank.", file=sys.stderr)
         return 2
 
     with SessionLocal() as db:
-        if db.scalar(select(User.id).where(User.email == email)):
-            print("An account with this email already exists.", file=sys.stderr)
+        organization = db.scalar(select(Organization).where(Organization.name == organization_name))
+        if organization is None:
+            organization = Organization(name=organization_name)
+            db.add(organization)
+            db.flush()
+
+        site = db.scalar(select(Site).where(Site.organization_id == organization.id, Site.name == site_name))
+        if site is None:
+            site = Site(id=args.site_id or uuid.uuid4(), organization_id=organization.id, name=site_name)
+            db.add(site)
+            db.flush()
+        elif args.site_id and site.id != args.site_id:
+            print("The existing site has a different ID than --site-id.", file=sys.stderr)
             return 2
-        organization = Organization(name=args.organization.strip())
-        db.add(organization)
-        db.flush()
-        site = Site(organization_id=organization.id, name=args.site.strip())
-        db.add(site)
-        db.flush()
-        admin = User(email=email, full_name=args.name.strip(), password_hash=hash_password(password), role=Role.super_admin, organization_id=organization.id, site_id=site.id)
-        db.add(admin)
+
+        admin = db.scalar(select(User).where(User.email == email))
+        if admin is not None:
+            if admin.role != Role.super_admin or admin.organization_id != organization.id:
+                print("That email already belongs to an account outside this bootstrap scope.", file=sys.stderr)
+                return 2
+            if admin.site_id not in (None, site.id):
+                print("The existing Super Admin belongs to a different site.", file=sys.stderr)
+                return 2
+        else:
+            password = getpass.getpass("New administrator password (12+ characters): ")
+            confirmation = getpass.getpass("Confirm password: ")
+            if len(password) < 12 or password != confirmation:
+                print("Password must contain at least 12 characters and both entries must match.", file=sys.stderr)
+                return 2
+            admin = User(email=email, full_name=full_name, password_hash=hash_password(password), role=Role.super_admin, organization_id=organization.id, site_id=site.id)
+            db.add(admin)
+
         db.commit()
-        print(f"Created organization {organization.id}, site {site.id}, and administrator {admin.email}.")
+        print(f"Development bootstrap is ready. Organization ID: {organization.id}; site ID: {site.id}; Super Admin: {admin.email}.")
     return 0
 
 

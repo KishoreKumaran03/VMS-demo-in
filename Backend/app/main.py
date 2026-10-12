@@ -221,6 +221,8 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), user: User =
             raise HTTPException(403, "Site administrators may create host or reception accounts at their own site")
         org_id = user.organization_id
     elif user.role == Role.super_admin:
+        if payload.role == Role.host:
+            raise HTTPException(422, "Create Host accounts through the host account endpoint so the directory record is created too")
         org_id = payload.organization_id or user.organization_id
         if not db.get(Organization, org_id):
             raise HTTPException(404, "Organization was not found")
@@ -553,8 +555,12 @@ def verify_pass(pass_code: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Pass was not found")
     visit = find_pass(db, pass_code)
     now = utcnow()
-    if not visit or not visit.visitor.is_active or visit.pass_revoked_at or is_expired(visit.pass_expires_at, now):
-        raise HTTPException(404, "Pass is invalid, expired, or revoked")
+    if not visit:
+        raise HTTPException(404, "Pass was not found")
+    if not visit.visitor.is_active or visit.pass_revoked_at:
+        raise HTTPException(404, "Pass is invalid or revoked")
+    if is_expired(visit.pass_expires_at, now):
+        raise HTTPException(404, "Pass has expired")
     return view_visit(visit)
 
 
@@ -564,8 +570,12 @@ def kiosk_check_in(pass_code: str, gate: str = "Reception", db: Session = Depend
         raise HTTPException(404, "Pass was not found")
     visit = find_pass(db, pass_code)
     now = utcnow()
-    if not visit or not visit.visitor.is_active or visit.pass_revoked_at or is_expired(visit.pass_expires_at, now):
-        raise HTTPException(404, "Pass is invalid, expired, or revoked")
+    if not visit:
+        raise HTTPException(404, "Pass was not found")
+    if not visit.visitor.is_active or visit.pass_revoked_at:
+        raise HTTPException(404, "Pass is invalid or revoked")
+    if is_expired(visit.pass_expires_at, now):
+        raise HTTPException(404, "Pass has expired")
     if visit.status == VisitStatus.checked_in:
         return view_visit(visit)
     if visit.status != VisitStatus.scheduled:

@@ -12,13 +12,15 @@ vi.mock("@/kiosk/api", async (importOriginal) => {
   const { EMPLOYEES: employeeFixtures } = await import("@/kiosk/data");
   return {
     ...actual,
-    searchKioskHosts: vi.fn(async () => employeeFixtures.map((host) => ({
-      id: host.id,
-      employee_id: host.employeeId || "",
-      name: host.name,
-      department: host.dept,
-      site_id: "test-site",
-    }))),
+    searchKioskHosts: vi.fn(async () =>
+      employeeFixtures.map((host) => ({
+        id: host.id,
+        employee_id: host.employeeId || "",
+        name: host.name,
+        department: host.dept,
+        site_id: "test-site",
+      })),
+    ),
   };
 });
 

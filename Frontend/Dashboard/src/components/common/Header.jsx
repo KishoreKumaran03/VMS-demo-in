@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
 
-export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
+export const Header = ({ onOpenNotifications }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, currentRole, unreadNotificationCount, showToast, logout } = useVms();
@@ -59,20 +59,8 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
             </button>
           </div>
 
-          {/* Right Action Icons: Workflow Guide, Notifications & User Avatar */}
+          {/* Right Action Icons: Notifications & User Avatar */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Demo Flow Trigger */}
-            {onOpenWorkflow && (
-              <button
-                onClick={onOpenWorkflow}
-                className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-primary text-xs font-semibold flex items-center gap-1.5 border border-blue-100 transition-colors shadow-xs"
-                title="Open Role Workflow Guide"
-              >
-                <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                <span className="hidden sm:inline">Workflow Guide</span>
-              </button>
-            )}
-
             {/* Notification Trigger */}
             <button
               aria-label="Notifications"
@@ -92,11 +80,9 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
                 className="w-10 h-10 rounded-full p-0.5 hover:ring-2 hover:ring-primary/20 transition-all flex items-center justify-center focus:outline-none"
                 title="Account menu"
               >
-                <img
-                  alt={currentUser.name}
-                  src={currentUser.avatarUrl}
-                  className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
-                />
+                <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-slate-200">
+                  {currentUser.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                </span>
               </button>
 
               {/* Profile Dropdown */}
@@ -110,30 +96,7 @@ export const Header = ({ onOpenNotifications, onOpenWorkflow }) => {
                     </span>
                   </div>
 
-                  <div className="py-2 px-4 text-xs text-slate-500 flex flex-col gap-1 border-b border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-slate-400">Department</span>
-                      <span className="font-medium text-slate-700">{currentUser.department}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-slate-400">Security Node</span>
-                      <span className="font-medium text-primary">Node #04 Active</span>
-                    </div>
-                  </div>
-
                   <div className="pt-1">
-                    {onOpenWorkflow && (
-                      <button
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          onOpenWorkflow();
-                        }}
-                        className="w-full px-4 py-2 text-left text-xs text-primary hover:bg-blue-50 flex items-center gap-2 font-medium transition-colors border-b border-slate-100"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">alt_route</span>
-                        <span>Role Workflow Guide</span>
-                      </button>
-                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"

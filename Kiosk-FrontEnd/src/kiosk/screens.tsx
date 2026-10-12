@@ -41,7 +41,16 @@ import {
   type Pass,
   type VisitorType,
 } from "./data";
-import { checkInPass, checkOutPass, getKioskRequest, KIOSK_SITE_ID, searchKioskHosts, submitWalkIn, verifyPass, type ApiVisit } from "./api";
+import {
+  checkInPass,
+  checkOutPass,
+  getKioskRequest,
+  KIOSK_SITE_ID,
+  searchKioskHosts,
+  submitWalkIn,
+  verifyPass,
+  type ApiVisit,
+} from "./api";
 import { FAQS, FAQ_CATEGORIES, type FaqCategory } from "./faq-data";
 import { useCardSpotlightTilt } from "./pointer";
 import {
@@ -278,10 +287,20 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
   const startCamera = async () => {
     setCameraError("");
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera access is unavailable in this browser.");
-      const detectorCtor = (window as Window & { BarcodeDetector?: new (options?: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector;
+      if (!navigator.mediaDevices?.getUserMedia)
+        throw new Error("Camera access is unavailable in this browser.");
+      const detectorCtor = (
+        window as Window & {
+          BarcodeDetector?: new (options?: { formats: string[] }) => {
+            detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
+          };
+        }
+      ).BarcodeDetector;
       if (!detectorCtor) throw new Error("QR scanning is unavailable. Type the pass code instead.");
-      streamRef.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+      streamRef.current = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
       if (!videoRef.current) return;
       videoRef.current.srcObject = streamRef.current;
       await videoRef.current.play();
@@ -291,18 +310,27 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
         try {
           const codes = await detector.detect(videoRef.current);
           if (codes[0]?.rawValue) return pick(codes[0].rawValue);
-        } catch { /* camera frame is not ready yet */ }
+        } catch {
+          /* camera frame is not ready yet */
+        }
         frameRef.current = requestAnimationFrame(scan);
       };
       frameRef.current = requestAnimationFrame(scan);
     } catch (error) {
-      setCameraError(error instanceof Error ? error.message : "Camera could not start. Type the pass code instead.");
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Camera could not start. Type the pass code instead.",
+      );
     }
   };
-  useEffect(() => () => {
-    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-  }, []);
+  useEffect(
+    () => () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
   return (
     <Page>
       <FlowHeader
@@ -313,7 +341,12 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
       />
       <div className="grid flex-1 grid-cols-[1fr_380px] items-center gap-14">
         <div className="relative mx-auto aspect-[4/3] h-full max-h-[460px] overflow-hidden rounded-3xl bg-foreground/90 shadow-lift">
-          <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full object-cover" />
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
           {[
             "left-6 top-6 border-l-4 border-t-4 rounded-tl-2xl",
             "right-6 top-6 border-r-4 border-t-4 rounded-tr-2xl",
@@ -366,7 +399,11 @@ function ScanScreen({ mode }: { mode: "signin" | "signout" }) {
             <Btn onClick={startCamera}>
               <QrCode className="h-5 w-5" /> Start QR scanner
             </Btn>
-            {cameraError && <p role="alert" className="text-[13px] text-destructive">{cameraError}</p>}
+            {cameraError && (
+              <p role="alert" className="text-[13px] text-destructive">
+                {cameraError}
+              </p>
+            )}
             <Btn variant="secondary" onClick={() => go(mode === "signin" ? "si-code" : "so-code")}>
               <KeyIcon className="h-5 w-5" /> Enter pass code instead
             </Btn>
@@ -412,7 +449,15 @@ function CodeScreen({ mode }: { mode: "signin" | "signout" }) {
             title="Enter your pass code"
             sub="Type the full code shown under the QR code in your invitation."
           />
-          <input aria-label="Visitor pass code" autoCapitalize="none" autoComplete="off" value={digits} onChange={(event) => setDigits(event.target.value.trim())} placeholder="Paste or type your pass code" className="h-[84px] w-full rounded-2xl border-2 border-primary bg-card px-5 text-[20px] font-bold shadow-soft outline-none focus:ring-4 focus:ring-primary/15" />
+          <input
+            aria-label="Visitor pass code"
+            autoCapitalize="none"
+            autoComplete="off"
+            value={digits}
+            onChange={(event) => setDigits(event.target.value.trim())}
+            placeholder="Paste or type your pass code"
+            className="h-[84px] w-full rounded-2xl border-2 border-primary bg-card px-5 text-[20px] font-bold shadow-soft outline-none focus:ring-4 focus:ring-primary/15"
+          />
           <div className="hidden">
             <span className="text-muted-foreground">VIS-</span>
             {Array.from({ length: 4 }).map((_, i) => (
@@ -454,12 +499,21 @@ function mapApiPass(visit: ApiVisit, code: string): Pass {
   const starts = new Date(visit.starts_at);
   const ends = new Date(visit.ends_at);
   return {
-    id: code, name: visit.visitor_name, phone: visit.visitor_phone || "",
+    id: code,
+    name: visit.visitor_name,
+    phone: visit.visitor_phone || "",
     host: { id: visit.host_id, employeeId: "", name: visit.host_name, dept: visit.host_department },
-    hostEmployeeId: "", department: visit.host_department, purposeCategory: visit.purpose,
-    purposeDetails: visit.purpose, slot: `${starts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to ${ends.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-    startHour: starts.getHours(), durationMinutes: Math.round((ends.getTime() - starts.getTime()) / 60000),
-    purpose: visit.purpose, type: "Guest", kind: "valid", approvalStatus: "Approved",
+    hostEmployeeId: "",
+    department: visit.host_department,
+    purposeCategory: visit.purpose,
+    purposeDetails: visit.purpose,
+    slot: `${starts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to ${ends.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+    startHour: starts.getHours(),
+    durationMinutes: Math.round((ends.getTime() - starts.getTime()) / 60000),
+    purpose: visit.purpose,
+    type: "Guest",
+    kind: "valid",
+    approvalStatus: "Approved",
   };
 }
 
@@ -499,7 +553,10 @@ function Verifying({ mode }: { mode: "signin" | "signout" }) {
         }
       }
     }, 350);
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
@@ -1244,7 +1301,9 @@ function OtpScreen({
               </button>
             )}
           </div>
-          <p className="mt-6 text-[12px] text-muted-foreground">Simulation only: no SMS is sent. Demo code: 123456.</p>
+          <p className="mt-6 text-[12px] text-muted-foreground">
+            Simulation only: no SMS is sent. Demo code: 123456.
+          </p>
         </div>
         <Keypad
           onDigit={(d) => !err && setCode((c) => (c.length < 6 ? c + d : c))}
@@ -1497,7 +1556,12 @@ function HostStep() {
       const rows = await searchKioskHosts(fullId);
       const found = rows.find((host) => host.employee_id.toUpperCase() === fullId);
       if (found) {
-        setMatched({ id: found.id, employeeId: found.employee_id, name: found.name, dept: found.department });
+        setMatched({
+          id: found.id,
+          employeeId: found.employee_id,
+          name: found.name,
+          dept: found.department,
+        });
         setNotFound(false);
         setDirectoryError("");
         failedCountRef.current = 0;
@@ -1595,7 +1659,11 @@ function HostStep() {
             title={interview ? "Who is your recruiter or HR contact?" : "Who are you meeting?"}
             sub={helperText}
           />
-          {directoryError && <p role="alert" className="mb-3 text-[13px] text-destructive">{directoryError}</p>}
+          {directoryError && (
+            <p role="alert" className="mb-3 text-[13px] text-destructive">
+              {directoryError}
+            </p>
+          )}
 
           {/* If 5 failed attempts: pause for 30 seconds */}
           {cooldown > 0 ? (
@@ -1772,7 +1840,14 @@ function Consent() {
         <div className="flex flex-col justify-end gap-4">
           <Box on={a} set={setA} label="I agree to the privacy notice" />
           <Box on={b} set={setB} label="I agree to the non-disclosure agreement" />
-          <Btn className="mt-4" disabled={!a || !b} onClick={() => { update({ consentAccepted: a, ndaAccepted: b }); go("wi-review"); }}>
+          <Btn
+            className="mt-4"
+            disabled={!a || !b}
+            onClick={() => {
+              update({ consentAccepted: a, ndaAccepted: b });
+              go("wi-review");
+            }}
+          >
             Continue <ArrowRight className="h-5 w-5" />
           </Btn>
           <button
@@ -1824,21 +1899,27 @@ function Review() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      if (!session.host?.id || !KIOSK_SITE_ID) throw new Error("Please select a host and ask reception to configure this kiosk site.");
+      if (!session.host?.id || !KIOSK_SITE_ID)
+        throw new Error("Please select a host and ask reception to configure this kiosk site.");
       const visit = await submitWalkIn({
         visitor_name: session.name,
         visitor_phone: session.phone,
         company: session.company || undefined,
         host_id: session.host.id,
         site_id: KIOSK_SITE_ID,
-        purpose: session.purpose === "Other" && session.purposeDetails ? session.purposeDetails : session.purpose || "Visit",
+        purpose:
+          session.purpose === "Other" && session.purposeDetails
+            ? session.purposeDetails
+            : session.purpose || "Visit",
         consent_accepted: session.consentAccepted === true,
         nda_accepted: session.ndaAccepted === true,
       });
       update({ visitRequestId: visit.id, pass: undefined });
       go("waiting");
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Your request could not be submitted.");
+      setSubmitError(
+        error instanceof Error ? error.message : "Your request could not be submitted.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1890,8 +1971,14 @@ function Review() {
             </div>
           ))}
         </div>
-        {submitError && <p role="alert" className="mt-3 text-[13px] text-destructive">{submitError}</p>}
-        <Btn className="mt-6" disabled={submitting} onClick={submit}>{submitting ? "Submitting…" : "Submit"}</Btn>
+        {submitError && (
+          <p role="alert" className="mt-3 text-[13px] text-destructive">
+            {submitError}
+          </p>
+        )}
+        <Btn className="mt-6" disabled={submitting} onClick={submit}>
+          {submitting ? "Submitting…" : "Submit"}
+        </Btn>
       </div>
     </Page>
   );
@@ -1899,7 +1986,7 @@ function Review() {
 
 /* ================= APPROVAL ================= */
 function Waiting() {
-  const { session, go, endSession } = useKiosk();
+  const { session, go, update, endSession } = useKiosk();
   const info = useVisitInfo();
   const walkin = session.flow === "walkin";
   const hostName = session.hostUnsure ? "reception" : info.hostShort;
@@ -1924,11 +2011,16 @@ function Waiting() {
           go("declined");
           return;
         }
-      } catch { /* retry on the next poll; the kiosk view shows a timeout if it stays offline */ }
+      } catch {
+        /* retry on the next poll; the kiosk view shows a timeout if it stays offline */
+      }
       timer = setTimeout(poll, 3000);
     };
     void poll();
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [walkin, session.visitRequestId, go, update]);
   return (
     <Page>
@@ -1950,8 +2042,8 @@ function Waiting() {
                 Waiting for {hostName} to approve your visit.
               </h1>
               <p className="mt-2 text-[14px] text-muted-foreground">
-                Your host has been notified in the VisitorHub dashboard. This usually takes less than
-                a minute.
+                Your host has been notified in the VisitorHub dashboard. This usually takes less
+                than a minute.
               </p>
             </div>
           </div>
@@ -1994,7 +2086,14 @@ function Waiting() {
           </div>
 
           <div className="flex justify-end gap-4">
-            <Btn variant="secondary" onClick={() => endSession("Leaving the kiosk. Your pending request remains with reception for review.")}>
+            <Btn
+              variant="secondary"
+              onClick={() =>
+                endSession(
+                  "Leaving the kiosk. Your pending request remains with reception for review.",
+                )
+              }
+            >
               Leave kiosk
             </Btn>
             <HelpBtn />
@@ -2284,7 +2383,14 @@ function Network() {
         title="We cannot connect right now."
         message="Please go to the reception desk, or try again in a moment."
       >
-        <Btn className="min-w-[180px]" onClick={() => session.code ? go(session.flow === "signout" ? "so-verifying" : "si-verifying") : endSession()}>
+        <Btn
+          className="min-w-[180px]"
+          onClick={() =>
+            session.code
+              ? go(session.flow === "signout" ? "so-verifying" : "si-verifying")
+              : endSession()
+          }
+        >
           Retry
         </Btn>
         <Btn

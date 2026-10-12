@@ -47,38 +47,42 @@ def main() -> int:
         users_response = client.get("/users", headers=headers)
         users_response.raise_for_status()
         users = {user["email"].lower(): user for user in users_response.json()}
-        accounts = [
-            (admin_email, admin_password, "site-admin"),
-            (host_email, host_password, "host"),
-        ]
-        for email, password, role in accounts:
-            existing = users.get(email)
-            if existing:
-                if existing["role"] != role or existing["site_id"] != site_id:
-                    raise SystemExit(f"Existing account {email} must use role {role} at the selected site.")
-                continue
-            created = client.post("/users", headers=headers, json={
-                "email": email,
-                "full_name": host_name if role == "host" else "E2E Site Administrator",
-                "password": password,
-                "role": role,
+        admin = users.get(admin_email)
+        if admin:
+            if admin["role"] != "site-admin" or admin["organization_id"] != organization_id or admin["site_id"] != site_id:
+                raise SystemExit(f"Existing account {admin_email} must be a Site Admin at the selected site.")
+        else:
+            client.post("/users", headers=headers, json={
+                "email": admin_email,
+                "full_name": "E2E Site Administrator",
+                "password": admin_password,
+                "role": "site-admin",
                 "organization_id": organization_id,
                 "site_id": site_id,
-            })
-            created.raise_for_status()
+            }).raise_for_status()
 
+        host_account = users.get(host_email)
+        if host_account and (host_account["role"] != "host" or host_account["organization_id"] != organization_id or host_account["site_id"] != site_id):
+            raise SystemExit(f"Existing account {host_email} must be a Host at the selected site.")
         host_rows = client.get("/hosts", headers=headers, params={"q": employee_id})
         host_rows.raise_for_status()
-        directory_host = next((host for host in host_rows.json() if host["employee_id"] == employee_id and host["site_id"] == site_id), None)
+        directory_host = next((host for host in host_rows.json() if host["employee_id"] == employee_id), None)
+        if directory_host and directory_host["site_id"] != site_id:
+            raise SystemExit("The configured employee ID belongs to a different site.")
         host_payload = {"employee_id": employee_id, "name": host_name, "email": host_email, "department": department, "site_id": site_id}
-        if directory_host:
-            updated = client.patch(f"/hosts/{directory_host['id']}", headers=headers, json={
+        if not host_account:
+            client.post("/hosts/accounts", headers=headers, json={
+                **host_payload,
+                "full_name": host_name,
+                "password": host_password,
+            }).raise_for_status()
+        elif directory_host:
+            client.patch(f"/hosts/{directory_host['id']}", headers=headers, json={
                 "name": host_name, "email": host_email, "department": department,
-            })
-            updated.raise_for_status()
+            }).raise_for_status()
         else:
-            created_host = client.post("/hosts", headers=headers, json=host_payload)
-            created_host.raise_for_status()
+            # Repair an existing Host login that lacks its host-directory entry.
+            client.post("/hosts", headers=headers, json=host_payload).raise_for_status()
 
     print(f"E2E accounts are ready for site {site_id}: {admin_email}, {host_email} ({employee_id}).")
     return 0

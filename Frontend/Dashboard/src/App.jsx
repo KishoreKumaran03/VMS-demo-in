@@ -13,13 +13,11 @@ import { SuperAdminDashboard } from './pages/SuperAdminDashboard.jsx';
 import { SiteAdminDashboard } from './pages/SiteAdminDashboard.jsx';
 import { HostDashboard } from './pages/HostDashboard.jsx';
 import { ReceptionistDashboard } from './pages/ReceptionistDashboard.jsx';
-import { WorkflowHelper } from './components/common/WorkflowHelper.jsx';
 
 const AppLayout = ({ children }) => {
   const location = useLocation();
   const { toastMessage, dataError } = useVms();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
 
   const isLoginPage = location.pathname === '/login';
 
@@ -31,7 +29,6 @@ const AppLayout = ({ children }) => {
         {showHeader && (
           <Header
             onOpenNotifications={() => setIsNotifOpen(true)}
-            onOpenWorkflow={() => setIsWorkflowOpen(true)}
           />
         )}
 
@@ -45,13 +42,6 @@ const AppLayout = ({ children }) => {
         )}
         {children}
       </main>
-
-      {/* Global Interactive Demo Workflow Guide & User Switcher */}
-      <WorkflowHelper
-        isOpen={isWorkflowOpen}
-        onOpen={() => setIsWorkflowOpen(true)}
-        onClose={() => setIsWorkflowOpen(false)}
-      />
 
       {/* Global Slide-Over Notification Drawer */}
       <NotificationDrawer isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />

@@ -1,4 +1,7 @@
-const API_ROOT = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+const API_ROOT = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(
+  /\/$/,
+  "",
+);
 export const KIOSK_SITE_ID = import.meta.env.VITE_KIOSK_SITE_ID || "";
 
 export type ApiVisit = {
@@ -30,9 +33,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const body = await response.json();
       if (typeof body.detail === "string") detail = body.detail;
       else if (Array.isArray(body.detail)) {
-        detail = body.detail.map((issue: { msg?: string }) => issue.msg).filter(Boolean).join("; ") || detail;
+        detail =
+          body.detail
+            .map((issue: { msg?: string }) => issue.msg)
+            .filter(Boolean)
+            .join("; ") || detail;
       }
-    } catch { /* no response body */ }
+    } catch {
+      /* no response body */
+    }
     throw new Error(detail);
   }
   return response.json() as Promise<T>;
@@ -43,7 +52,9 @@ export function verifyPass(code: string) {
 }
 
 export function checkInPass(code: string) {
-  return request<ApiVisit>(`/kiosk/pass/${encodeURIComponent(code)}/check-in?gate=Kiosk`, { method: "POST" });
+  return request<ApiVisit>(`/kiosk/pass/${encodeURIComponent(code)}/check-in?gate=Kiosk`, {
+    method: "POST",
+  });
 }
 
 export function checkOutPass(code: string) {
@@ -51,11 +62,14 @@ export function checkOutPass(code: string) {
 }
 
 export async function searchKioskHosts(query = "", department = "") {
-  if (!KIOSK_SITE_ID) throw new Error("This kiosk has not been assigned to a site. Please ask reception for help.");
+  if (!KIOSK_SITE_ID)
+    throw new Error("This kiosk has not been assigned to a site. Please ask reception for help.");
   const params = new URLSearchParams({ site_id: KIOSK_SITE_ID });
   if (query) params.set("q", query);
   if (department) params.set("department", department);
-  return request<Array<{ id: string; employee_id: string; name: string; department: string; site_id: string }>>(`/kiosk/hosts?${params}`);
+  return request<
+    Array<{ id: string; employee_id: string; name: string; department: string; site_id: string }>
+  >(`/kiosk/hosts?${params}`);
 }
 
 export function submitWalkIn(payload: {

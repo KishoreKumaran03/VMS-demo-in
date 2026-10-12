@@ -8,30 +8,20 @@ export const SiteAdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPassForModal, setSelectedPassForModal] = useState(null);
   const [showNewPassModal, setShowNewPassModal] = useState(false);
-  const [isPinging, setIsPinging] = useState(false);
 
   // New pass form state
   const [newVisitorName, setNewVisitorName] = useState('');
   const [newVisitorEmail, setNewVisitorEmail] = useState('');
   const [newVisitorCompany, setNewVisitorCompany] = useState('');
   const [newVisitorHost, setNewVisitorHost] = useState('');
-  const [newVisitorZone, setNewVisitorZone] = useState('Zone A - Engineering Floor 3');
 
   const pendingPasses = passes.filter((p) => p.status === 'Pending Review');
   const activeOnSiteCount = summary.on_site;
 
-  const handlePingAll = () => {
-    setIsPinging(true);
-    setTimeout(() => {
-      setIsPinging(false);
-      showToast('No hardware connectivity integration is configured for this site.');
-    }, 600);
-  };
-
   const handleCreatePass = async (e) => {
     e.preventDefault();
-    if (!newVisitorName.trim() || !newVisitorEmail.trim()) {
-      showToast('Please enter visitor name and email');
+    if (!newVisitorName.trim() || !newVisitorEmail.trim() || !newVisitorHost) {
+      showToast('Enter the visitor details and select a configured host.');
       return;
     }
 
@@ -46,7 +36,6 @@ export const SiteAdminDashboard = () => {
       scheduledDate: 'Today',
       scheduledTime: '2:30 PM',
       slotDescription: 'Today, 2:30 PM - 5:00 PM',
-      zoneClearance: newVisitorZone,
       purpose: 'Fast-Track Pass Created by Site Admin',
       });
     } catch (error) {
@@ -169,48 +158,10 @@ export const SiteAdminDashboard = () => {
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-slate-900">54</span>
-              <span className="text-[11px] text-slate-500">PM Slot</span>
+              <span className="text-2xl font-bold text-slate-900">{summary.expected_today}</span>
+              <span className="text-[11px] text-slate-500">Today</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">Scheduled arrivals</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Special Event / Campus Drive Progress Banner */}
-      <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 text-primary flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-[20px]">school</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-slate-900 leading-tight">
-                  Fall Graduate Hiring Drive
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-primary border border-blue-100">
-                  Pool Batch 02
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Auditorium Wing • Block C Checkpoint
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-600 font-medium">Turnout Verification</span>
-            <span className="text-primary font-semibold">78 / 110 Verified</span>
-          </div>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-primary h-full rounded-full" style={{ width: '71%' }}></div>
-          </div>
-          <div className="flex justify-between items-center text-[11px] text-slate-400 mt-0.5">
-            <span>Pending requests: {summary.pending}</span>
-            <span>Hardware timing unavailable</span>
           </div>
         </div>
       </div>
@@ -299,56 +250,9 @@ export const SiteAdminDashboard = () => {
         )}
       </div>
 
-      {/* Campus Gateways & Sensors */}
-      <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">Campus Gateways & Sensors</h3>
-          <button
-            onClick={handlePingAll}
-            disabled={isPinging}
-            className="text-primary hover:underline text-xs font-semibold flex items-center gap-1"
-          >
-            <span className={`material-symbols-outlined text-[15px] ${isPinging ? 'animate-spin' : ''}`}>
-              refresh
-            </span>
-            <span>Ping All</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-900">Main Turnstile #1</p>
-              <p className="text-[11px] text-slate-500">Online • 14ms</p>
-            </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          </div>
-
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-900">East Barrier Gate 2</p>
-              <p className="text-[11px] text-slate-500">Online • 21ms</p>
-            </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          </div>
-
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-900">VIP Lobby Optical</p>
-              <p className="text-[11px] text-slate-500">Online • 9ms</p>
-            </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          </div>
-
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-900">Loading Dock Scanner</p>
-              <p className="text-[11px] text-slate-500">Syncing ledger...</p>
-            </div>
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-          </div>
-        </div>
-      </div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        Physical gates and badge readers are not connected to this VisitorHub deployment.
+      </section>
 
       {/* Visitor Passes & Registry */}
       <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-100 flex flex-col gap-3">

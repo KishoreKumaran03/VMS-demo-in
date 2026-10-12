@@ -31,7 +31,7 @@ def upgrade():
     op.create_table(
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("email", sa.String(320), nullable=False, unique=True),
+        sa.Column("email", sa.String(320), nullable=False),
         sa.Column("full_name", sa.String(160), nullable=False),
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("role", sa.Enum("super-admin", "site-admin", "host", "receptionist", name="user_role"), nullable=False),
@@ -86,7 +86,7 @@ def upgrade():
         sa.Column("ends_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("status", sa.Enum("scheduled", "pending", "checked-in", "checked-out", "cancelled", "rejected", name="visit_status"), nullable=False),
         sa.Column("source", sa.String(24), nullable=False, server_default="invited"),
-        sa.Column("pass_digest", sa.String(64), nullable=False, unique=True),
+        sa.Column("pass_digest", sa.String(64), nullable=False),
         sa.Column("pass_ciphertext", sa.Text(), nullable=False),
         sa.Column("pass_expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("pass_revoked_at", sa.DateTime(timezone=True)),

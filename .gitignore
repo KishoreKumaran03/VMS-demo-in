@@ -1,0 +1,14 @@
+# Keep local service credentials and frontend build configuration out of version control.
+Backend/.env
+**/.env.local
+**/.env.*.local
+
+# Generated dependencies and build outputs.
+**/node_modules/
+**/dist/
+**/.output/
+**/coverage/
+**/__pycache__/
+*.py[cod]
+playwright-report/
+test-results/

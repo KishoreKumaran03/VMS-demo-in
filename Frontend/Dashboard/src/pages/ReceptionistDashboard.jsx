@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 
 export const ReceptionistDashboard = () => {
-  const { passes, hosts, summary, checkInVisitor, checkOutVisitor, verifyVisitorPass, addPassRequest, showToast } = useVms();
+  const { currentUser, passes, hosts, sites, summary, checkInVisitor, checkOutVisitor, verifyVisitorPass, addPassRequest, showToast } = useVms();
 
   const [inputPassId, setInputPassId] = useState('');
   const [verifiedPass, setVerifiedPass] = useState(null);
@@ -19,7 +19,8 @@ export const ReceptionistDashboard = () => {
   const [otpDigits, setOtpDigits] = useState(['1', '2', '3', '4']);
   const [wHost, setWHost] = useState('');
   const [wPurpose, setWPurpose] = useState('Client Meeting');
-  const [wAcknowledge, setWAcknowledge] = useState(true);
+  const [wConsentAccepted, setWConsentAccepted] = useState(false);
+  const [wNdaAccepted, setWNdaAccepted] = useState(false);
 
   // Active board filter & search
   const [boardSearch, setBoardSearch] = useState('');
@@ -30,6 +31,7 @@ export const ReceptionistDashboard = () => {
   const checkedOutList = passes.filter((p) => p.status === 'Checked Out');
   const activeCount = checkedInList.length;
   const expectedTotal = summary.visitors_today;
+  const assignedSite = sites.find((site) => site.id === currentUser?.site_id) || sites[0];
 
   const handleVerifyPass = async (queryId) => {
     const idToSearch = (queryId || inputPassId).trim().toUpperCase();
@@ -71,8 +73,8 @@ export const ReceptionistDashboard = () => {
 
   // Walk-in Wizard submit
   const handleCompleteWalkIn = async () => {
-    if (!wName.trim() || wPhone.replace(/\D/g, '').length < 7 || !wHost || !wAcknowledge) {
-      showToast('Enter the visitor name and phone, select a configured host, and confirm the terms.');
+    if (!wName.trim() || wPhone.replace(/\D/g, '').length < 7 || !wHost || !wConsentAccepted || !wNdaAccepted) {
+      showToast('Enter the visitor details, select a configured host, and accept both agreements.');
       return;
     }
 
@@ -90,7 +92,8 @@ export const ReceptionistDashboard = () => {
       slotDescription: 'Immediate Walk-in Fast Pass',
       zoneClearance: 'Main Gate & Lobby Zone 1',
       purpose: wPurpose,
-      consentAccepted: wAcknowledge,
+      consentAccepted: wConsentAccepted,
+      ndaAccepted: wNdaAccepted,
       });
     } catch (error) {
       showToast(error.message || 'The walk-in could not be registered.');
@@ -106,6 +109,8 @@ export const ReceptionistDashboard = () => {
     setWName('');
     setWPhone('');
     setWCompany('');
+    setWConsentAccepted(false);
+    setWNdaAccepted(false);
 
     showToast(`Walk-in visitor ${newPass.visitorName} registered & checked in! Badge #${newPass.id} active.`);
   };
@@ -138,10 +143,10 @@ export const ReceptionistDashboard = () => {
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-semibold text-slate-900 truncate">
-              Front Desk - Main Gate Lobby
+              Front Desk - {assignedSite?.name || 'Assigned site'}
             </span>
             <span className="text-[11px] text-slate-500 truncate">
-              Operator: Claire Davis • Terminal #01
+              Operator: {currentUser.name}
             </span>
           </div>
         </div>
@@ -307,9 +312,9 @@ export const ReceptionistDashboard = () => {
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 block">Clearance Level</span>
+                  <span className="text-[11px] text-slate-400 block">Visit purpose</span>
                 <span className="font-semibold text-primary truncate block">
-                  {verifiedPass.zoneClearance}
+                  {verifiedPass.purpose}
                 </span>
               </div>
             </div>
@@ -710,11 +715,20 @@ export const ReceptionistDashboard = () => {
                 <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    checked={wAcknowledge}
-                    onChange={(e) => setWAcknowledge(e.target.checked)}
+                    checked={wConsentAccepted}
+                    onChange={(e) => setWConsentAccepted(e.target.checked)}
                     className="w-4 h-4 rounded text-primary focus:ring-primary/20"
                   />
-                  <span className="text-slate-800 font-medium">Visitor acknowledged terms & NDA</span>
+                  <span className="text-slate-800 font-medium">Visitor accepted the privacy notice</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={wNdaAccepted}
+                    onChange={(e) => setWNdaAccepted(e.target.checked)}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary/20"
+                  />
+                  <span className="text-slate-800 font-medium">Visitor accepted the NDA</span>
                 </label>
               </div>
             )}
