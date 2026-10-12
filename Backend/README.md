@@ -6,11 +6,15 @@ FastAPI backend shared by the staff dashboard and visitor kiosk. PostgreSQL stor
 
 1. Make sure Docker Desktop is running.
 2. In `Backend/`, create `.env` from `.env.example` if needed. Set a strong `POSTGRES_PASSWORD` and `JWT_SECRET`. Keep this file private.
-3. Start PostgreSQL and the API:
+3. Start PostgreSQL, the API, the staff dashboard, and the visitor kiosk:
 
    ```sh
    docker compose up --build -d
    ```
+
+From the repository root on Windows, use `start-docker.bat` to build and start the services, and `stop-docker.bat` to stop them. The stop script preserves the PostgreSQL data volume.
+
+Open the dashboard at [http://localhost:3000](http://localhost:3000), the kiosk at [http://localhost:3001](http://localhost:3001), the API health check at [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health), or the API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 On a **new PostgreSQL data volume**, the Postgres image creates the VisitorHub tables from `database/schema.sql`. The API then runs Alembic on startup; the SQL bootstrap records the initial revision, so Alembic can apply later migrations normally. Existing volumes are not reinitialized by the Postgres image, and continue to use Alembic migrations. Keep the SQL bootstrap aligned with `migrations/versions/0001_initial.py` when changing the initial schema.
 
@@ -28,7 +32,11 @@ docker compose exec api python -m app.bootstrap \
   --name "Platform Admin"
 ```
 
-The command prompts for the admin password and prints the new site ID. Skip this step if the database already has an admin.
+The command prompts for the admin password and prints the new site ID. Skip this step if the database already has an admin. Set `VITE_KIOSK_SITE_ID` in `Backend/.env` to that site ID, then rebuild the kiosk so the site assignment is included in the frontend bundle:
+
+```sh
+docker compose up --build -d kiosk
+```
 
 To create a site administrator and a host account with its kiosk directory entry:
 
@@ -43,7 +51,7 @@ docker compose exec api python scripts/provision_local_accounts.py \
 
 This command prompts for the existing Super Admin password and both new account passwords. It creates accounts through the API. Hosts cannot grant themselves admin access.
 
-## Run the frontends
+## Run the frontends without Docker
 
 From the repository root, start the dashboard in one terminal:
 

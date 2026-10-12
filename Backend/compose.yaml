@@ -27,5 +27,26 @@ services:
       db:
         condition: service_healthy
 
+  dashboard:
+    build:
+      context: ../Frontend/Dashboard
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+  kiosk:
+    build:
+      context: ../Kiosk-FrontEnd
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+        VITE_KIOSK_SITE_ID: ${VITE_KIOSK_SITE_ID:-}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+
 volumes:
   visitorhub-postgres:
