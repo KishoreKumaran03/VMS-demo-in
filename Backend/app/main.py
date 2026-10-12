@@ -1,3 +1,4 @@
+import hmac
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from .config import get_settings
 from .database import get_db
 from .models import AuditEvent, Host, Notification, Organization, Role, Site, User, Visit, VisitStatus, Visitor, utcnow
-from .schemas import AuditOut, HostAccountCreate, HostAccountOut, HostCreate, HostOut, HostPatch, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
+from .schemas import AuditOut, HostAccountCreate, HostAccountOut, HostCreate, HostOut, HostPatch, InitialSignupRequest, KioskRequestOut, LoginRequest, NotificationOut, OrganizationCreate, OrganizationOut, RejectVisit, SiteCreate, SiteOut, SitePatch, TokenOut, UserCreate, UserOut, UserPatch, VisitCreate, VisitOut, VisitPatch, VisitorOut, VisitorPatch, WalkInCreate
 from .security import current_user, decrypt_pass, digest_pass, encrypt_pass, hash_password, issue_token, verify_password
 
 app = FastAPI(title="VisitorHub API", version="1.0.0", openapi_url="/api/v1/openapi.json")
@@ -88,6 +89,41 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if not user or not user.is_active or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email or password is incorrect")
+    return TokenOut(access_token=issue_token(user), user=UserOut.model_validate(user))
+
+
+@app.post("/api/v1/auth/signup", response_model=TokenOut, status_code=201)
+def initial_signup(payload: InitialSignupRequest, db: Session = Depends(get_db)):
+    setup_key = get_settings().initial_setup_key
+    if not setup_key:
+        raise HTTPException(403, "First-time signup is disabled. Configure INITIAL_SETUP_KEY for initial setup.")
+    if not hmac.compare_digest(payload.setup_key, setup_key):
+        raise HTTPException(403, "The setup key is invalid")
+
+    # Serialize first-user creation so simultaneous signup requests cannot create multiple bootstrap admins.
+    db.execute(text("LOCK TABLE users IN EXCLUSIVE MODE"))
+    if db.scalar(select(User.id).limit(1)):
+        db.rollback()
+        raise HTTPException(409, "Setup is already complete. Ask an administrator to create your account.")
+
+    organization_name = payload.organization_name.strip()
+    site_name = payload.site_name.strip()
+    full_name = payload.full_name.strip()
+    if not organization_name or not site_name or not full_name:
+        raise HTTPException(422, "Organization, site, and full name are required")
+
+    organization = Organization(name=organization_name)
+    db.add(organization)
+    db.flush()
+    site = Site(organization_id=organization.id, name=site_name)
+    db.add(site)
+    db.flush()
+    user = User(email=str(payload.email).lower(), full_name=full_name,
+                password_hash=hash_password(payload.password), role=Role.super_admin,
+                organization_id=organization.id, site_id=None)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return TokenOut(access_token=issue_token(user), user=UserOut.model_validate(user))
 
 

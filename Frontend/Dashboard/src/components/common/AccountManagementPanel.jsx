@@ -49,14 +49,14 @@ export const AccountManagementPanel = ({ scope }) => {
       setError('Select an active site before creating this account.');
       return;
     }
-    if (!isPlatformAdmin && role === 'host' && (!form.employeeId.trim() || !form.department.trim())) {
+    if (role === 'host' && (!form.employeeId.trim() || !form.department.trim())) {
       setError('Enter the host employee ID and department.');
       return;
     }
 
     setSaving(true);
     try {
-      if (!isPlatformAdmin && role === 'host') {
+      if (role === 'host') {
         await api('/hosts/accounts', {
           method: 'POST',
           body: JSON.stringify({
@@ -102,7 +102,7 @@ export const AccountManagementPanel = ({ scope }) => {
           <h2 id="account-management-title" className="text-base font-semibold text-slate-900">Account management</h2>
           <p className="mt-1 text-xs text-slate-500">
             {isPlatformAdmin
-              ? 'Create site administrators for active sites.'
+              ? 'Create site admins, Super Admins, hosts, and receptionists for active sites.'
               : 'Create host or reception accounts for your site.'}
           </p>
         </div>
@@ -111,7 +111,7 @@ export const AccountManagementPanel = ({ scope }) => {
           onClick={() => { setError(''); setShowForm((visible) => !visible); }}
           className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
         >
-          {showForm ? 'Close' : isPlatformAdmin ? 'Add site admin' : 'Add team account'}
+          {showForm ? 'Close' : isPlatformAdmin ? 'Add account' : 'Add team account'}
         </button>
       </div>
 
@@ -121,6 +121,17 @@ export const AccountManagementPanel = ({ scope }) => {
             <label className="grid gap-1 text-xs font-medium text-slate-700">
               Account type
               <select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                <option value="host">Host</option>
+                <option value="receptionist">Receptionist</option>
+              </select>
+            </label>
+          )}
+          {isPlatformAdmin && (
+            <label className="grid gap-1 text-xs font-medium text-slate-700">
+              Account type
+              <select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                <option value="site-admin">Site Admin</option>
+                <option value="super-admin">Super Admin</option>
                 <option value="host">Host</option>
                 <option value="receptionist">Receptionist</option>
               </select>
@@ -150,7 +161,7 @@ export const AccountManagementPanel = ({ scope }) => {
             <input name="password" type="password" value={form.password} onChange={updateField} autoComplete="new-password" minLength={12} maxLength={128} required className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
             <span className="font-normal text-slate-500">At least 12 characters. Share it securely with the new user.</span>
           </label>
-          {!isPlatformAdmin && role === 'host' && (
+          {role === 'host' && (
             <>
               <label className="grid gap-1 text-xs font-medium text-slate-700">
                 Employee ID

@@ -22,7 +22,15 @@ The schema covers organizations, sites, staff users and roles, hosts, visitors, 
 
 ## Create accounts
 
-There is no default login. On a new database, create the first organization, site, and Super Admin:
+There is no default login. To create the first Super Admin from the dashboard login page, set a private one-time key in `Backend/.env`:
+
+```env
+INITIAL_SETUP_KEY=use-a-long-random-secret-here
+```
+
+Start the services and choose **First-time setup** on the login page. Enter the key, organization, first site, and admin details. This creates the organization, site, and Super Admin together. Signup only works while there are no user accounts; after the first account is created, the endpoint refuses further signup. Keep the key private and remove it from `.env` after setup.
+
+You can also create the first organization, site, and Super Admin with the CLI:
 
 ```sh
 docker compose exec api python -m app.bootstrap \
@@ -32,7 +40,7 @@ docker compose exec api python -m app.bootstrap \
   --name "Platform Admin"
 ```
 
-The command prompts for the admin password and prints the new site ID. Skip this step if the database already has an admin. Set `VITE_KIOSK_SITE_ID` in `Backend/.env` to that site ID, then rebuild the kiosk so the site assignment is included in the frontend bundle:
+The command prompts for the admin password and prints the new site ID. Use either first-time setup method, not both. Set `VITE_KIOSK_SITE_ID` in `Backend/.env` to that site ID, then rebuild the kiosk so the site assignment is included in the frontend bundle:
 
 ```sh
 docker compose up --build -d kiosk
@@ -49,7 +57,7 @@ docker compose exec api python scripts/provision_local_accounts.py \
   --employee-id EMP-1234 --department Engineering
 ```
 
-This command prompts for the existing Super Admin password and both new account passwords. It creates accounts through the API. Hosts cannot grant themselves admin access.
+This command prompts for the existing Super Admin password and both new account passwords. Once signed in, Super Admins can create site admins, other Super Admins, hosts, and receptionists from the dashboard **Accounts** tab. Site admins can create hosts and receptionists for their own site from **Account management**. These forms call the backend account APIs, which enforce the role and site permissions. Hosts cannot grant themselves admin access.
 
 ## Run the frontends without Docker
 
