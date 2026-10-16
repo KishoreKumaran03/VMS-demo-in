@@ -2,7 +2,34 @@ const API_ROOT = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
   /\/$/,
   "",
 );
-export const KIOSK_SITE_ID = import.meta.env.VITE_KIOSK_SITE_ID || "";
+const DEVICE_STORAGE_KEY = "visitorhub_kiosk_device";
+
+/** This kiosk's pairing, saved in the browser after an administrator's one-time code is entered. */
+export type PairedDevice = { key: string; siteId: string; siteName: string; name: string };
+
+export function pairedDevice(): PairedDevice | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(DEVICE_STORAGE_KEY) || "null");
+    return stored?.key && stored?.siteId ? (stored as PairedDevice) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function forgetPairing() {
+  try {
+    window.localStorage.removeItem(DEVICE_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+  window.dispatchEvent(new Event("kiosk-pairing-changed"));
+}
+
+/** The site this kiosk was paired to; every kiosk request is scoped to it by the server. */
+export function kioskSiteId() {
+  return pairedDevice()?.siteId || "";
+}
 
 export type ApiVisit = {
   id: string;
@@ -18,15 +45,33 @@ export type ApiVisit = {
   purpose: string;
   starts_at: string;
   ends_at: string;
-  status: "scheduled" | "pending" | "checked-in" | "checked-out" | "cancelled" | "rejected";
+  status:
+    | "pending"
+    | "security-review"
+    | "scheduled"
+    | "checked-in"
+    | "temporarily-out"
+    | "checked-out"
+    | "no-show"
+    | "cancelled"
+    | "rejected";
   pass_code?: string | null;
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const device = pairedDevice();
   const response = await fetch(`${API_ROOT}${path}`, {
     ...init,
-    headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
+    headers: {
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...(device ? { "X-Device-Key": device.key } : {}),
+      ...init?.headers,
+    },
   });
+  if (response.status === 401 && device) {
+    // The administrator disabled or re-paired this kiosk: return to the pairing screen.
+    forgetPairing();
+  }
   if (!response.ok) {
     let detail = "We could not complete that request. Please try again.";
     try {
@@ -47,12 +92,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function pairKiosk(pairingCode: string) {
+  const result = await request<{
+    device_key: string;
+    device: { site_id: string; name: string };
+    site_name: string;
+  }>("/kiosk/pair", { method: "POST", body: JSON.stringify({ pairing_code: pairingCode }) });
+  const device: PairedDevice = {
+    key: result.device_key,
+    siteId: result.device.site_id,
+    siteName: result.site_name,
+    name: result.device.name,
+  };
+  window.localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(device));
+  window.dispatchEvent(new Event("kiosk-pairing-changed"));
+  return device;
+}
+
 export function verifyPass(code: string) {
   return request<ApiVisit>(`/kiosk/pass/${encodeURIComponent(code)}`);
 }
 
 export function checkInPass(code: string) {
-  return request<ApiVisit>(`/kiosk/pass/${encodeURIComponent(code)}/check-in?gate=Kiosk`, {
+  return request<ApiVisit>(`/kiosk/pass/${encodeURIComponent(code)}/check-in`, {
     method: "POST",
   });
 }
@@ -62,9 +124,7 @@ export function checkOutPass(code: string) {
 }
 
 export async function searchKioskHosts(query = "", department = "") {
-  if (!KIOSK_SITE_ID)
-    throw new Error("This kiosk has not been assigned to a site. Please ask reception for help.");
-  const params = new URLSearchParams({ site_id: KIOSK_SITE_ID });
+  const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (department) params.set("department", department);
   return request<
@@ -83,7 +143,13 @@ export function submitWalkIn(payload: {
   consent_accepted: boolean;
   nda_accepted: boolean;
 }) {
-  return request<ApiVisit>("/kiosk/walk-ins", { method: "POST", body: JSON.stringify(payload) });
+  // One key per submission lets a retried request after a network drop return the same visit.
+  const key = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  return request<ApiVisit>("/kiosk/walk-ins", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { "Idempotency-Key": key },
+  });
 }
 
 export function getKioskRequest(id: string) {

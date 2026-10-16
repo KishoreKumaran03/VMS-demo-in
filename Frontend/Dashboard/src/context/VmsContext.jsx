@@ -15,7 +15,10 @@ async function fetchAllVisits() {
 }
 
 function displayStatus(status) {
-  return ({ pending: 'Pending Review', scheduled: 'Approved', 'checked-in': 'Checked In', 'checked-out': 'Checked Out', cancelled: 'Cancelled', rejected: 'Rejected' })[status] || status;
+  return ({
+    pending: 'Pending Review', 'security-review': 'Security Review', scheduled: 'Approved', 'checked-in': 'Checked In',
+    'temporarily-out': 'Stepped Out', 'checked-out': 'Checked Out', 'no-show': 'No Show', cancelled: 'Cancelled', rejected: 'Rejected',
+  })[status] || status;
 }
 
 function toPass(visit) {
@@ -42,6 +45,8 @@ function toPass(visit) {
     checkInTime: visit.checked_in_at ? new Date(visit.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
     checkInGate: visit.check_in_gate || undefined,
     checkOutTime: visit.checked_out_at ? new Date(visit.checked_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    overdue: visit.overdue === true,
+    version: visit.version,
   };
 }
 
@@ -151,7 +156,11 @@ export const VmsProvider = ({ children }) => {
     setAuthLoading(false);
     return user;
   };
-  const logout = () => { clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); setHosts([]); setDataError(null); };
+  const logout = () => {
+    // End the server-side session too, so the token stops working even if it was copied.
+    api('/auth/logout', { method: 'POST' }).catch(() => undefined);
+    clearAccessToken(); setToken(null); setCurrentUser(null); setPasses([]); setSites([]); setHosts([]); setDataError(null);
+  };
   const setCurrentRole = () => showToast('Roles are assigned to your account by an administrator.');
 
   const addPassRequest = async (passData) => {
@@ -172,13 +181,11 @@ export const VmsProvider = ({ children }) => {
       payload.consent_accepted = passData.consentAccepted === true;
       payload.nda_accepted = passData.ndaAccepted === true;
     }
+    // A fresh key per submission: a retried request after a network error returns the same visit instead of a duplicate.
+    const headers = { 'Idempotency-Key': crypto.randomUUID() };
     const result = currentRole === 'receptionist'
-      ? await api('/reception/walk-ins', { method: 'POST', body: JSON.stringify(payload) })
-      : await api('/visits', {
-      method: 'POST', body: JSON.stringify({
-        ...payload,
-      }),
-    });
+      ? await api('/reception/walk-ins', { method: 'POST', headers, body: JSON.stringify(payload) })
+      : await api('/visits', { method: 'POST', headers, body: JSON.stringify(payload) });
     await refreshData();
     return toPass(result);
   };
@@ -201,23 +208,23 @@ export const VmsProvider = ({ children }) => {
   };
   const checkInVisitor = async (id, gate = 'Main Gate Lobby') => {
     const visit = passes.find((pass) => pass.id === id);
-    if (!visit?.passCode) throw new Error('This visit has no active pass.');
+    if (!visit) throw new Error('This visit is not in your list.');
     try {
-      await api(`/kiosk/pass/${encodeURIComponent(visit.passCode)}/check-in?gate=${encodeURIComponent(gate)}`, { method: 'POST' });
+      await api(`/visits/${id}/check-in`, { method: 'POST', body: JSON.stringify({ gate }) });
       await refreshData();
       showToast(`${visit.visitorName} checked in.`);
       return true;
     } catch (error) { showToast(error.message || 'Check-in failed.'); return false; }
   };
   const verifyVisitorPass = async (code) => {
-    const result = await api(`/kiosk/pass/${encodeURIComponent(code)}`);
+    const result = await api('/passes/verify', { method: 'POST', body: JSON.stringify({ code }) });
     return { ...toPass(result), passCode: code };
   };
   const checkOutVisitor = async (id) => {
     const visit = passes.find((pass) => pass.id === id);
-    if (!visit?.passCode) throw new Error('This visit has no active pass.');
+    if (!visit) throw new Error('This visit is not in your list.');
     try {
-      await api(`/kiosk/pass/${encodeURIComponent(visit.passCode)}/check-out`, { method: 'POST' });
+      await api(`/visits/${id}/check-out`, { method: 'POST' });
       await refreshData();
       showToast(`${visit.visitorName} checked out.`);
     } catch (error) { showToast(error.message || 'Check-out failed.'); }

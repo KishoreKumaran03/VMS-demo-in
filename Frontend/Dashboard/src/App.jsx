@@ -9,6 +9,7 @@ import { VmsProvider, useVms } from './context/VmsContext.jsx';
 import { Header } from './components/common/Header.jsx';
 import { NotificationDrawer } from './components/common/NotificationDrawer.jsx';
 import { Login } from './pages/Login.jsx';
+import { ResetPasswordPage } from './pages/PasswordReset.jsx';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard.jsx';
 import { SiteAdminDashboard } from './pages/SiteAdminDashboard.jsx';
 import { HostDashboard } from './pages/HostDashboard.jsx';
@@ -19,7 +20,7 @@ const AppLayout = ({ children }) => {
   const { toastMessage, dataError } = useVms();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === '/login' || location.pathname === '/reset-password';
 
   const { currentUser, authLoading } = useVms();
   const showHeader = !isLoginPage && !authLoading && !!currentUser;
@@ -81,6 +82,7 @@ export default function App() {
         <AppLayout>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/super-admin" element={<RoleRoute role="super-admin"><SuperAdminDashboard /></RoleRoute>} />
             <Route path="/site-admin" element={<RoleRoute role="site-admin"><SiteAdminDashboard /></RoleRoute>} />
             <Route path="/host" element={<RoleRoute role="host"><HostDashboard /></RoleRoute>} />

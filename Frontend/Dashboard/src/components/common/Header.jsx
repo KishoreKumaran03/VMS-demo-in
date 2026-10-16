@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useVms } from '../../context/VmsContext';
+import { ChangePasswordDialog } from '../../pages/PasswordReset.jsx';
 
 export const Header = ({ onOpenNotifications }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, currentRole, unreadNotificationCount, showToast, logout } = useVms();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const getRoleTitle = (role) => {
     switch (role) {
@@ -98,6 +100,13 @@ export const Header = ({ onOpenNotifications }) => {
 
                   <div className="pt-1">
                     <button
+                      onClick={() => { setShowProfileMenu(false); setShowPasswordDialog(true); }}
+                      className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">key</span>
+                      <span>Change password</span>
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
                     >
@@ -111,6 +120,13 @@ export const Header = ({ onOpenNotifications }) => {
           </div>
         </div>
       </header>
+
+      {showPasswordDialog && (
+        <ChangePasswordDialog
+          onClose={() => setShowPasswordDialog(false)}
+          onDone={() => { setShowPasswordDialog(false); showToast('Password changed. Your other sessions were signed out.'); }}
+        />
+      )}
 
       {/* Backdrop for closing dropdown */}
       {showProfileMenu && (

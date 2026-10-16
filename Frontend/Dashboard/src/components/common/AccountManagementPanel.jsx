@@ -120,7 +120,7 @@ export const AccountManagementPanel = ({ scope }) => {
           {!isPlatformAdmin && (
             <label className="grid gap-1 text-xs font-medium text-slate-700">
               Account type
-              <select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+              <select aria-label="Account type" value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
                 <option value="host">Host</option>
                 <option value="receptionist">Receptionist</option>
               </select>
@@ -129,7 +129,7 @@ export const AccountManagementPanel = ({ scope }) => {
           {isPlatformAdmin && (
             <label className="grid gap-1 text-xs font-medium text-slate-700">
               Account type
-              <select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+              <select aria-label="Account type" value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
                 <option value="site-admin">Site Admin</option>
                 <option value="super-admin">Super Admin</option>
                 <option value="host">Host</option>
@@ -140,7 +140,7 @@ export const AccountManagementPanel = ({ scope }) => {
           {isPlatformAdmin ? (
             <label className="grid gap-1 text-xs font-medium text-slate-700">
               Site
-              <select value={siteId} onChange={(event) => setSiteId(event.target.value)} required className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+              <select aria-label="Site" value={siteId} onChange={(event) => setSiteId(event.target.value)} required className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
                 <option value="">Choose a site</option>
                 {sites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
               </select>
