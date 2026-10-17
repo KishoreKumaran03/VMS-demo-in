@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 import { PassModal } from '../components/common/PassModal';
 import { AccountManagementPanel } from '../components/common/AccountManagementPanel';
+import { DevicesPanel } from '../components/admin/DevicesPanel.jsx';
+import { SecurityPanel } from '../components/admin/SecurityPanel.jsx';
 
 export const SiteAdminDashboard = () => {
   const { passes, hosts, sites, summary, approvePass, rejectPass, addPassRequest, showToast } = useVms();
@@ -97,6 +99,8 @@ export const SiteAdminDashboard = () => {
       </div>
 
       <AccountManagementPanel scope="site" />
+      <SecurityPanel />
+      <DevicesPanel />
 
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

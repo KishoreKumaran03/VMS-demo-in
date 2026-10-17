@@ -6,9 +6,7 @@ RUN npm ci
 
 COPY . .
 ARG VITE_API_URL=http://localhost:8000/api/v1
-ARG VITE_KIOSK_SITE_ID=
 ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_KIOSK_SITE_ID=${VITE_KIOSK_SITE_ID}
 ENV NITRO_PRESET=node-server
 RUN npm run build
 

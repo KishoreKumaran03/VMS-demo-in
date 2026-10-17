@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVms } from '../context/VmsContext';
+import { ForgotPasswordForm } from './PasswordReset.jsx';
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -165,7 +166,10 @@ export const Login = () => {
             )}
           </button>
         </form>
-        </> : (
+        <button type="button" onClick={() => setAuthMode('forgot')} className="self-center text-xs font-medium text-slate-500 hover:text-primary">Forgot password?</button>
+        </> : authMode === 'forgot' ? (
+          <ForgotPasswordForm onBack={() => setAuthMode('login')} />
+        ) : (
           <form onSubmit={handleSignup} className="flex flex-col gap-3">
             <div>
               <h2 className="text-base font-semibold text-slate-900">Create the first administrator</h2>

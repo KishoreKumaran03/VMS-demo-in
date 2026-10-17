@@ -2,20 +2,33 @@
 
 ## Applications
 
-- `Backend/` contains the FastAPI service, PostgreSQL models, Alembic migrations, role and site authorization, bootstrap/provisioning scripts, and Docker Compose services.
-- `Frontend/Dashboard/` is the staff application for Super Admin, Site Admin, Host, and Receptionist. It authenticates through the API and reloads role-scoped PostgreSQL data.
-- `Kiosk-FrontEnd/` is the visitor kiosk. Normal pass lookup, host lookup, walk-in, check-in, and check-out flows use the same API and database as the Dashboard.
+- `Backend/` contains:
+  - the FastAPI service;
+  - the background worker;
+  - the PostgreSQL schema (Alembic migrations 0001–0008);
+  - role, permission and site authorization;
+  - the encrypted backup sidecar;
+  - operator commands;
+  - Docker Compose services.
+- `Frontend/Dashboard/` is the staff application for Super Admin, Site Admin, Host and Receptionist. It authenticates through the API and reloads role-scoped PostgreSQL data. Administrators also manage kiosks, security reviews, restricted-entry records, retention and system health there.
+- `Kiosk-FrontEnd/` is the visitor kiosk. It must be paired with a one-time code from the Dashboard. After that, pass lookup, host lookup, walk-ins, check-in and check-out use the same API and database as the Dashboard, limited to the kiosk's site.
 
-## Local development
+## Documentation
 
-Use the steps in [Backend/README.md](Backend/README.md). Docker Compose applies Alembic migrations, waits for service health, and starts both frontends. `Backend/scripts/setup-demo.sh` requires an explicit `APP_ENV=development` and creates/reuses the three local demo accounts using the application's bootstrap and authenticated provisioning API.
-
-`Backend/scripts/reset-dev-db.sh` verifies the Compose project, PostgreSQL database, and exact project volume before asking for an explicit reset phrase. It does not delete unrelated Docker data.
+- [Backend/README.md](Backend/README.md): local development, demo data, tests
+- [Backend/docs/BACKEND.md](Backend/docs/BACKEND.md): architecture, data model, rules, API reference
+- [Backend/docs/SCHEMA.md](Backend/docs/SCHEMA.md): generated table reference
+- [Backend/docs/OPERATIONS.md](Backend/docs/OPERATIONS.md): configuration, backups and restores, monitoring, recovery
+- [Backend/docs/DATABASE_DESIGN.md](Backend/docs/DATABASE_DESIGN.md): design decisions and implementation report
 
 ## Verification
 
-The Kiosk package has unit tests for UI rendering. Its Playwright suite in `Kiosk-FrontEnd/e2e/` runs the actual staff Dashboard and kiosk against the configured HTTP API and PostgreSQL. Use that suite for visit lifecycle and role-permission verification; the unit fixtures and development-only demo panel are not production visitor records.
+- `Backend/tests`: pytest against a disposable PostgreSQL, covering migrations, authentication, scoping, visits, passes, security, retention and the sync feed.
+- `Kiosk-FrontEnd/src/test`: kiosk UI unit tests.
+- `Kiosk-FrontEnd/e2e/`: Playwright, running the real Dashboard and kiosk against the HTTP API and PostgreSQL.
 
 ## Not connected
 
-Phone OTP is simulated and sends no SMS. Badge printing is a preview. Physical gate, badge-reader, camera hardware, and database backup services are not configured by this prototype.
+- No email or SMS provider. Development prints emails to the container output; phone OTP is simulated.
+- Badge printing is a browser preview. Gate and badge-reader hardware is not integrated.
+- Off-site backup storage is a configurable copy command; production point-in-time recovery depends on the hosting choice.

@@ -45,7 +45,7 @@ import {
   checkInPass,
   checkOutPass,
   getKioskRequest,
-  KIOSK_SITE_ID,
+  kioskSiteId,
   searchKioskHosts,
   submitWalkIn,
   verifyPass,
@@ -1904,14 +1904,15 @@ function Review() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      if (!session.host?.id || !KIOSK_SITE_ID)
-        throw new Error("Please select a host and ask reception to configure this kiosk site.");
+      const siteId = kioskSiteId();
+      if (!session.host?.id || !siteId)
+        throw new Error("Please select a host and ask reception to pair this kiosk.");
       const visit = await submitWalkIn({
         visitor_name: session.name,
         visitor_phone: session.phone,
         company: session.company || undefined,
         host_id: session.host.id,
-        site_id: KIOSK_SITE_ID,
+        site_id: siteId,
         purpose:
           session.purpose === "Other" && session.purposeDetails
             ? session.purposeDetails

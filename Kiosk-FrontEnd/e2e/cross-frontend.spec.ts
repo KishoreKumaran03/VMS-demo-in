@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 const dashboardUrl = process.env.VMS_E2E_DASHBOARD_URL ?? "http://127.0.0.1:3000";
 const kioskUrl = process.env.VMS_E2E_KIOSK_URL ?? "http://127.0.0.1:3001";
@@ -31,6 +31,33 @@ async function login(page: Page, email: string, password: string) {
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole("button", { name: /Sign in/ }).click();
+}
+
+type PairedDevice = { key: string; siteId: string; siteName: string; name: string };
+
+/** Registers a kiosk through the admin API and pairs it, exactly as an administrator would. */
+async function pairDevice(): Promise<PairedDevice> {
+  const json = async (path: string, body: unknown, token?: string) => {
+    const response = await fetch(`${apiUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`${path} failed: ${response.status} ${await response.text()}`);
+    return response.json();
+  };
+  const { access_token } = await json("/auth/login", { email: adminEmail, password: adminPassword });
+  const registered = await json("/devices", { name: `E2E kiosk ${Date.now()}-${Math.random()}`, site_id: siteId }, access_token);
+  const paired = await json("/kiosk/pair", { pairing_code: registered.pairing_code });
+  return { key: paired.device_key, siteId: paired.device.site_id, siteName: paired.site_name, name: paired.device.name };
+}
+
+/** A browser context whose kiosk is already paired (the pairing is stored in localStorage). */
+async function pairedKioskContext(browser: Browser) {
+  const device = await pairDevice();
+  const context = await browser.newContext();
+  await context.addInitScript((value) => window.localStorage.setItem("visitorhub_kiosk_device", value), JSON.stringify(device));
+  return context;
 }
 
 async function dashboardVisits(page: Page) {
@@ -136,22 +163,22 @@ test("all demo roles restore sessions and backend permissions remain scoped", as
     await hostPage.reload();
     expect((await dashboardApi(hostPage, "/auth/me")).body.role).toBe("host");
     expect((await dashboardApi(hostPage, "/users")).status).toBe(403);
+    // Kiosk endpoints refuse unpaired callers; a paired kiosk finds hosts at its own site.
+    const anonymousHostSearch = await hostPage.evaluate(
+      async (root) => (await fetch(`${root}/kiosk/hosts?q=EMP-1234`)).status,
+      apiUrl,
+    );
+    expect(anonymousHostSearch).toBe(401);
+    const device = await pairDevice();
     expect(
-      (
-        await hostPage.evaluate(
-          async ({ root, id }) => {
-            const response = await fetch(`${root}/kiosk/hosts?site_id=${id}&q=EMP-1234`);
-            const rows = await response.json();
-            return {
-              status: response.status,
-              recognized: rows.some(
-                (row: { employee_id: string }) => row.employee_id === "EMP-1234",
-              ),
-            };
-          },
-          { root: apiUrl, id: siteId! },
-        )
-      ).recognized,
+      await hostPage.evaluate(
+        async ({ root, key }) => {
+          const response = await fetch(`${root}/kiosk/hosts?q=EMP-1234`, { headers: { "X-Device-Key": key } });
+          const rows = await response.json();
+          return rows.some((row: { employee_id: string }) => row.employee_id === "EMP-1234");
+        },
+        { root: apiUrl, key: device.key },
+      ),
     ).toBe(true);
 
     await anonymousPage.goto(kioskUrl);
@@ -188,8 +215,8 @@ test("host, administrator, and kiosk share the persisted visit lifecycle", async
   requireTestAccounts();
   const hostContext = await browser.newContext();
   const adminContext = await browser.newContext();
-  const kioskContext = await browser.newContext();
-  const invalidPassContext = await browser.newContext();
+  const kioskContext = await pairedKioskContext(browser);
+  const invalidPassContext = await pairedKioskContext(browser);
   const hostPage = await hostContext.newPage();
   const adminPage = await adminContext.newPage();
   const kioskPage = await kioskContext.newPage();
@@ -375,7 +402,7 @@ test("Super Admin-created hosts flow through kiosk search, approval, pass QR, an
   browser,
 }) => {
   requireTestAccounts();
-  const kioskContext = await browser.newContext();
+  const kioskContext = await pairedKioskContext(browser);
   const adminContext = await browser.newContext();
   const superadminContext = await browser.newContext();
   const kioskPage = await kioskContext.newPage();
@@ -490,11 +517,8 @@ test("Super Admin-created hosts flow through kiosk search, approval, pass QR, an
       )
       .toBe("checked-in");
 
-    const checkedOut = await dashboardApi(
-      adminPage,
-      `/kiosk/pass/${encodeURIComponent(passCode!.trim())}/check-out`,
-      "POST",
-    );
+    // Staff sign visitors out through the authenticated staff endpoint (kiosk endpoints need a paired device).
+    const checkedOut = await dashboardApi(adminPage, `/visits/${createdVisit!.id}/check-out`, "POST");
     expect(checkedOut.status).toBe(200);
     await expect
       .poll(

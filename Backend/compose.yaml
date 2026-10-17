@@ -22,6 +22,11 @@ services:
       DATABASE_USER: visitorhub
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Backend/.env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Backend/.env}
+      TOKEN_PEPPER: ${TOKEN_PEPPER:?Set TOKEN_PEPPER in Backend/.env}
+      PASS_ENCRYPTION_KEY: ${PASS_ENCRYPTION_KEY:?Set PASS_ENCRYPTION_KEY in Backend/.env}
+      APP_ENV: ${APP_ENV:-production}
+      EMAIL_DELIVERY: ${EMAIL_DELIVERY:-disabled}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
       INITIAL_SETUP_KEY: ${INITIAL_SETUP_KEY:-}
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-30}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173}
@@ -41,6 +46,50 @@ services:
       retries: 12
       start_period: 10s
 
+  worker:
+    # Same image as the API; runs scheduled jobs (outbox delivery, visit sweeps, blacklist maintenance, retention).
+    build: .
+    command: ["python", "-m", "app.worker"]
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: visitorhub
+      DATABASE_USER: visitorhub
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Backend/.env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in Backend/.env}
+      TOKEN_PEPPER: ${TOKEN_PEPPER:?Set TOKEN_PEPPER in Backend/.env}
+      PASS_ENCRYPTION_KEY: ${PASS_ENCRYPTION_KEY:?Set PASS_ENCRYPTION_KEY in Backend/.env}
+      APP_ENV: ${APP_ENV:-production}
+      EMAIL_DELIVERY: ${EMAIL_DELIVERY:-disabled}
+    depends_on:
+      api:
+        condition: service_healthy  # the API applies migrations before the worker starts
+    restart: unless-stopped
+
+  backup:
+    # Opt-in: `docker compose --profile backup up -d`. Needs BACKUP_AGE_RECIPIENT (see docs/OPERATIONS.md).
+    profiles: ["backup"]
+    build: ./backup
+    environment:
+      PGHOST: db
+      PGUSER: visitorhub
+      PGDATABASE: visitorhub
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Backend/.env}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_AGE_IDENTITY_FILE: ${BACKUP_AGE_IDENTITY_FILE:-}
+      BACKUP_TIME: ${BACKUP_TIME:-02:00}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_COPY_COMMAND: ${BACKUP_COPY_COMMAND:-}
+    volumes:
+      - visitorhub-backups:/backups
+    tmpfs:
+      - /work  # the unencrypted dump only ever exists in memory
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   dashboard:
     build:
       context: ../Frontend/Dashboard
@@ -57,7 +106,6 @@ services:
       context: ../Kiosk-FrontEnd
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
-        VITE_KIOSK_SITE_ID: ${VITE_KIOSK_SITE_ID:-00000000-0000-4000-8000-000000000001}
     ports:
       - "3001:3000"
     depends_on:
@@ -66,3 +114,4 @@ services:
 
 volumes:
   visitorhub-postgres:
+  visitorhub-backups:

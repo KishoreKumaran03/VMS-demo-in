@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useVms } from '../context/VmsContext';
 import { AccountManagementPanel } from '../components/common/AccountManagementPanel';
+import { DevicesPanel } from '../components/admin/DevicesPanel.jsx';
+import { RetentionPanel } from '../components/admin/RetentionPanel.jsx';
+import { SecurityPanel } from '../components/admin/SecurityPanel.jsx';
 
 export const SuperAdminDashboard = () => {
   const { sites, auditLogs, addSite, showToast, summary, refreshData } = useVms();
@@ -143,7 +146,29 @@ export const SuperAdminDashboard = () => {
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">policy</span>
-            <span>Policies</span>
+            <span>Retention</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex-1 min-w-[75px] py-1.5 px-3 text-center rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'security'
+                ? 'bg-white text-primary shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">shield_person</span>
+            <span>Security</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('devices')}
+            className={`flex-1 min-w-[75px] py-1.5 px-3 text-center rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'devices'
+                ? 'bg-white text-primary shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">tablet_mac</span>
+            <span>Kiosks</span>
           </button>
           <button
             onClick={() => setActiveTab('audit')}
@@ -332,7 +357,7 @@ export const SuperAdminDashboard = () => {
                   </div>
                   <div>
                     <p className="text-[11px] text-slate-500">Check-in Kiosks</p>
-                    <p className="font-semibold text-slate-900">Not configured</p>
+                    <p className="font-semibold text-slate-900">Managed in Kiosks tab</p>
                   </div>
                 </div>
 
@@ -351,12 +376,9 @@ export const SuperAdminDashboard = () => {
 
       {activeTab === 'accounts' && <AccountManagementPanel scope="platform" />}
 
-      {activeTab === 'policies' && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-slate-900">Platform policies</h2>
-          <p className="mt-1 text-sm text-slate-600">Policy configuration is not stored by the current VisitorHub API.</p>
-        </section>
-      )}
+      {activeTab === 'policies' && <RetentionPanel />}
+      {activeTab === 'security' && <SecurityPanel />}
+      {activeTab === 'devices' && <DevicesPanel />}
 
       {/* TAB 4: SECURITY AUDIT LOGS */}
       {activeTab === 'audit' && (

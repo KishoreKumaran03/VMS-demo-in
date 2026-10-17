@@ -31,6 +31,7 @@ from sqlalchemy import select
 import uuid
 from app.database import SessionLocal
 from app.models import Host, Role, Site, User
+from app.security import principal_for
 
 with SessionLocal() as db:
     site = db.get(Site, uuid.UUID("00000000-0000-4000-8000-000000000001"))
@@ -40,10 +41,22 @@ with SessionLocal() as db:
         "host@visitorhub.example.com": Role.host,
     }
     accounts = {u.email: u for u in db.scalars(select(User).where(User.email.in_(expected))).all()}
-    if not site or any(email not in accounts or accounts[email].role != role or accounts[email].organization_id != site.organization_id or (email != "superadmin@visitorhub.example.com" and accounts[email].site_id != site.id) for email, role in expected.items()):
+    access = {email: principal_for(user) for email, user in accounts.items()}
+    if not site or any(email not in accounts or access[email] is None or access[email].role != role or accounts[email].organization_id != site.organization_id or (email != "superadmin@visitorhub.example.com" and access[email].site_ids != frozenset({site.id})) for email, role in expected.items()):
         raise SystemExit("Demo user roles and site assignments are incomplete.")
-    host = db.scalar(select(Host).where(Host.email == "host@visitorhub.example.com", Host.site_id == site.id, Host.active.is_(True)))
+    host = db.scalar(select(Host).where(Host.user_id == accounts["host@visitorhub.example.com"].id, Host.site_id == site.id, Host.status == "active"))
     if not host or host.employee_id != "EMP-1234":
         raise SystemExit("The Host login is missing its active host-directory entry.")
     print(f"Verified 3 demo accounts and active host directory record at site {site.id}.")
+
+    # Register (or re-pair) the demo kiosk and print a one-time pairing code to type into it.
+    from app.models import Device
+    from app.services import devices
+    kiosk = db.scalar(select(Device).where(Device.site_id == site.id, Device.name == "Lobby kiosk"))
+    if kiosk is None:
+        kiosk, code = devices.register(db, site=site, name="Lobby kiosk", device_type="kiosk", actor_id=accounts["superadmin@visitorhub.example.com"].id)
+    else:
+        code = devices.new_pairing_code(db, kiosk)
+    db.commit()
+    print(f"Kiosk pairing code (valid 15 minutes): {code}  - open http://localhost:3001 and enter it.")
 PY

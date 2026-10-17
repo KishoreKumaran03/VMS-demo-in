@@ -6,9 +6,10 @@ import uuid
 
 from sqlalchemy import select
 
+from .services import accounts
 from .database import SessionLocal
-from .models import Organization, Role, Site, User
-from .security import hash_password
+from .models import Organization, Role, Site, SiteSettings, User
+from .security import principal_for
 
 
 def main() -> int:
@@ -38,6 +39,7 @@ def main() -> int:
         site = db.scalar(select(Site).where(Site.organization_id == organization.id, Site.name == site_name))
         if site is None:
             site = Site(id=args.site_id or uuid.uuid4(), organization_id=organization.id, name=site_name)
+            site.settings = SiteSettings()
             db.add(site)
             db.flush()
         elif args.site_id and site.id != args.site_id:
@@ -46,11 +48,9 @@ def main() -> int:
 
         admin = db.scalar(select(User).where(User.email == email))
         if admin is not None:
-            if admin.role != Role.super_admin or admin.organization_id != organization.id:
+            access = principal_for(admin)
+            if access is None or access.role != Role.super_admin or admin.organization_id != organization.id:
                 print("That email already belongs to an account outside this bootstrap scope.", file=sys.stderr)
-                return 2
-            if admin.site_id not in (None, site.id):
-                print("The existing Super Admin belongs to a different site.", file=sys.stderr)
                 return 2
         else:
             password = getpass.getpass("New administrator password (12+ characters): ")
@@ -58,8 +58,8 @@ def main() -> int:
             if len(password) < 12 or password != confirmation:
                 print("Password must contain at least 12 characters and both entries must match.", file=sys.stderr)
                 return 2
-            admin = User(email=email, full_name=full_name, password_hash=hash_password(password), role=Role.super_admin, organization_id=organization.id, site_id=site.id)
-            db.add(admin)
+            admin = accounts.create_account(db, organization_id=organization.id, email=email, full_name=full_name, password=password,
+                                            role=Role.super_admin, site_ids=None, actor_id=None)
 
         db.commit()
         print(f"Development bootstrap is ready. Organization ID: {organization.id}; site ID: {site.id}; Super Admin: {admin.email}.")

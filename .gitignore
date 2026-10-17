@@ -12,3 +12,6 @@ Backend/.env
 *.py[cod]
 playwright-report/
 test-results/
+
+# Local Python environments.
+**/.venv/
